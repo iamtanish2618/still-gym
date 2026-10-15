@@ -14,7 +14,9 @@
     "test": "node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate-local.mjs",
-    "db:seed": "node scripts/seed-local.mjs"
+    "db:seed": "node scripts/seed-local.mjs",
+    "test:browser": "node test/browser.mjs && node test/browser-states.mjs",
+    "format": "prettier --write app server test db/schema.ts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
@@ -31,6 +33,8 @@
     "@vitejs/plugin-rsc": "0.5.26",
     "drizzle-kit": "0.31.10",
     "json-rpc-2.0": "1.7.1",
+    "playwright": "^1.62.1",
+    "prettier": "^3.6.2",
     "raw-body": "3.0.2",
     "react-server-dom-webpack": "19.2.6",
     "typescript": "5.9.3",

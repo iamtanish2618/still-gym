@@ -1,2 +1,4 @@
-import Gym from './gym';
-export default function Page(){return <Gym/>;}
+import Gym from "./gym";
+export default function Page() {
+  return <Gym />;
+}
