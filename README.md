@@ -4,6 +4,8 @@ A minimal gym booking app for BYTE’s web development challenge. Members reserv
 
 **Task 2 repository:** https://github.com/iamtanish2618/still-gym
 
+**Reviewers: [start here](REVIEW_GUIDE.md)** for demo accounts, the main booking demonstration, and a requirement-to-test checklist.
+
 ![Still member schedule](docs/screenshots/schedule-preview.png)
 
 ## Stack and data model (8 lines)
