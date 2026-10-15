@@ -125,7 +125,7 @@ Errors always use `{ "error": { "code": "...", "message": "...", "fields": {} } 
 
 The project is prepared for Sites/Cloudflare Workers with a D1 binding named `DB`; SQL migrations are in `drizzle/`. A deployment does not copy local data. The optional `/api/setup` bootstrap is disabled unless a secret `SETUP_KEY` is configured; it accepts that key only through `X-Setup-Key`, only seeds an empty database and never alters the schema. Remove the secret after initialization. Do not expose an unseeded shared deployment.
 
-A hosted preview is separate from the public GitHub submission and may require the owner’s ChatGPT sign-in. Reviewers can always run the repository locally using the commands above. Live link and current deployment status are recorded in `DEPLOYMENT.md` when available.
+The optional hosted deployment failed in its migration runner; there is no verified live link. See [DEPLOYMENT.md](DEPLOYMENT.md) for the exact failure and limits of the diagnosis. The complete app runs locally using the commands above; screenshots and browser tests come from that running application.
 
 ## Tradeoffs and remaining limitations
 

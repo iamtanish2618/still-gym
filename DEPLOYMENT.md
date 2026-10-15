@@ -1,9 +1,15 @@
-# Hosted preview
+# Deployment status
 
-[Open Still](https://still-gym-tanish-byte.aniketyadav982.chatgpt.site)
+The application runs locally and both repositories are public. **The optional Sites deployment did not succeed; there is no verified hosted demo.**
 
-The Sites preview is owner-private and may require the connected owner’s ChatGPT sign-in. It is an additional preview, not a publicly accessible recruitment demo. Use the public GitHub repository and local setup in README.md for the submission.
+The hosting migration runner returned `incomplete input: SQLITE_ERROR` while applying the initial migration containing SQLite triggers. The exact migration passes locally through Wrangler D1 and through the API regression database. Formatting complete SQL statements onto individual lines did not resolve the host error. The hosting parser is the suspected cause, not a confirmed diagnosis. No capacity or waitlist guarantees were removed to work around it.
 
-The deployment runs the same API and SQLite schema on Cloudflare Workers and D1. Hosted data is separate from local data. Demo accounts are listed in README.md. One-time database initialization uses a secret setup key, which is removed after seeding. The setup endpoint then returns 404.
+The failed deployment has no active database binding exposed by the Sites database viewer. No hosted seed was run, and the temporary setup secret was removed.
 
-To deploy elsewhere, provide a Workers-compatible runtime with a D1 binding named `DB`, apply the SQL in `drizzle/` once, and seed an empty database. A generic static host alone cannot run the API. Never copy local database files or real credentials into Git.
+Diagnostic identifiers:
+- Site: `appgprj_6ad0ff152aa08191ac1a32fa96355747`
+- Saved version: `appgprj_6ad0ff152aa08191ac1a32fa96355747~appgver_f98621a90d2481918f83d7a95a2da77d`
+- Deployment: `appgdep_6ad106934f4081918f5766b8a2566ecf`
+- Source: `c1c282753494720a1de5af2b0ebbafeb9d37e862`
+
+Use the reproducible local setup in README.md. The full brief makes deployment optional. A direct Workers/D1 deployment would need the migrations applied through a runner that preserves complete `CREATE TRIGGER ... END` statements, a D1 binding named `DB`, and seed data in an empty database. A static host alone cannot run the API.
