@@ -74,6 +74,12 @@ const day = (n: number) =>
     day: "numeric",
     month: "short",
   }).format(n);
+const bookingMessage = (booking: Booking) =>
+  booking.status === "waitlisted"
+    ? `You’re number ${booking.position} in line. We’ll book you automatically when a mat opens.`
+    : booking.status === "confirmed"
+      ? `Your mat is reserved. Check-in code: ${booking.code}.`
+      : "This reservation was cancelled on another screen. Availability has been refreshed.";
 const navigate = (page: string) => {
   window.location.hash = "/" + page;
 };
@@ -158,35 +164,65 @@ export default function Gym() {
     [confirm, setConfirm] = useState<number | null>(null),
     [authMode, setAuthMode] = useState("login");
   const requestSequence = useRef(0),
+    loadingSequence = useRef<number | null>(null),
     mutating = useRef(false),
     previousBookings = useRef<Booking[]>([]),
-    rosterSequence = useRef(0);
+    rosterSequence = useRef(0),
+    rosterLoadingSequence = useRef<number | null>(null);
   const now = clock + serverOffset;
   const api = useCallback(
     async (path: string, options: RequestInit = {}, override?: string) => {
       const auth = override ?? token;
       let r: Response;
+      let data: ApiResponse;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
       try {
         r = await fetch("/api" + path, {
           ...options,
+          signal: controller.signal,
           headers: {
             "Content-Type": "application/json",
             ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
           },
           cache: "no-store",
         });
-      } catch {
+        try {
+          data = (await r.json()) as ApiResponse;
+        } catch {
+          if (controller.signal.aborted)
+            throw new DOMException("Aborted", "AbortError");
+          throw new RequestError(
+            "The server sent an unreadable response. Please try again.",
+            502,
+          );
+        }
+      } catch (e) {
+        if (e instanceof RequestError) throw e;
         throw new RequestError(
-          "Cannot connect. Check your connection and try again.",
+          controller.signal.aborted
+            ? "The request timed out. Check My bookings before retrying a reservation."
+            : "Cannot connect. Check your connection and try again.",
           0,
         );
+      } finally {
+        clearTimeout(timeout);
       }
-      const data = (await r.json()) as ApiResponse;
       if (!r.ok) {
-        if (r.status === 401 && !path.startsWith("/auth/")) {
+        if (
+          r.status === 401 &&
+          !path.startsWith("/auth/") &&
+          sessionStorage.getItem("still-token") === auth
+        ) {
           sessionStorage.removeItem("still-token");
+          requestSequence.current++;
+          rosterSequence.current++;
           setUser(null);
           setToken("");
+          setSessions([]);
+          setBookings([]);
+          setRoster([]);
+          previousBookings.current = [];
           navigate("login");
         }
         throw new RequestError(
@@ -242,7 +278,11 @@ export default function Gym() {
   const load = useCallback(
     async (quiet = false) => {
       if (!user || mutating.current) return;
+      // A quiet poll must not invalidate a slower request for the same view.
+      // Explicit navigation/filter changes can still replace an obsolete request.
+      if (quiet && loadingSequence.current === requestSequence.current) return;
       const seq = ++requestSequence.current;
+      loadingSequence.current = seq;
       if (!quiet) setLoading(true);
       try {
         const [s, b] = await Promise.all([
@@ -266,9 +306,11 @@ export default function Gym() {
             "A mat opened up. You’re booked! Your check-in code is in My bookings.",
           );
         previousBookings.current = b.bookings;
+        return { sessions: s.sessions, bookings: b.bookings };
       } catch (e) {
         if (seq === requestSequence.current) setLoadError((e as Error).message);
       } finally {
+        if (loadingSequence.current === seq) loadingSequence.current = null;
         if (seq === requestSequence.current) setLoading(false);
       }
     },
@@ -291,7 +333,10 @@ export default function Gym() {
   const loadRoster = useCallback(
     async (quiet = false) => {
       if (!staffSession || user?.role !== "admin") return;
+      if (quiet && rosterLoadingSequence.current === rosterSequence.current)
+        return;
       const seq = ++rosterSequence.current;
+      rosterLoadingSequence.current = seq;
       if (!quiet) setRosterLoading(true);
       try {
         const d = await api(`/sessions/${staffSession}/bookings`);
@@ -303,6 +348,8 @@ export default function Gym() {
         if (seq === rosterSequence.current)
           setRosterError((e as Error).message);
       } finally {
+        if (rosterLoadingSequence.current === seq)
+          rosterLoadingSequence.current = null;
         if (seq === rosterSequence.current) setRosterLoading(false);
       }
     },
@@ -357,10 +404,14 @@ export default function Gym() {
     try {
       await api("/auth/logout", { method: "POST", body: "{}" });
       sessionStorage.removeItem("still-token");
+      requestSequence.current++;
+      rosterSequence.current++;
       setToken("");
       setUser(null);
       setSessions([]);
       setBookings([]);
+      setRoster([]);
+      setStaffSession("");
       previousBookings.current = [];
       navigate("login");
     } catch (e) {
@@ -378,6 +429,7 @@ export default function Gym() {
     setNotice("");
     const original = sessions;
     const wait = s.remaining === 0;
+    let failed = false;
     setSessions((list) =>
       list.map((x) =>
         x.id === s.id
@@ -395,18 +447,28 @@ export default function Gym() {
         method: "POST",
         body: "{}",
       });
-      setNotice(
-        wait
-          ? `You’re number ${d.booking.position} in line. We’ll book you automatically when a mat opens.`
-          : `Your mat is reserved. Check-in code: ${d.booking.code}.`,
-      );
+      setBookings((list) => [
+        ...list.filter((b) => b.id !== d.booking.id),
+        d.booking,
+      ]);
+      setNotice(bookingMessage(d.booking));
     } catch (e) {
+      failed = true;
       setSessions(original);
       setError((e as Error).message);
     } finally {
       mutating.current = false;
+      const refreshed = await load(true);
+      // A disconnected response is not proof that the write failed. Read back
+      // the member's actual booking rather than retrying the mutation blindly.
+      const recovered = refreshed?.bookings.find(
+        (b) => b.session_id === s.id && b.status !== "cancelled",
+      );
+      if (failed && recovered) {
+        setError("");
+        setNotice(bookingMessage(recovered));
+      }
       setPending("");
-      await load(true);
     }
   }
   async function cancel(b: Booking) {
@@ -415,8 +477,17 @@ export default function Gym() {
     requestSequence.current++;
     setPending(`cancel-${b.id}`);
     setError("");
+    setNotice("");
+    let failed = false;
     try {
       await api(`/bookings/${b.id}`, { method: "DELETE" });
+      setBookings((list) =>
+        list.map((x) =>
+          x.id === b.id
+            ? { ...x, status: "cancelled", code: null, position: null }
+            : x,
+        ),
+      );
       setConfirm(null);
       setNotice(
         b.status === "waitlisted"
@@ -424,11 +495,24 @@ export default function Gym() {
           : "Booking cancelled. Your mat is available to the next member.",
       );
     } catch (e) {
+      failed = true;
       setError((e as Error).message);
     } finally {
       mutating.current = false;
+      const refreshed = await load(true);
+      if (
+        failed &&
+        refreshed?.bookings.some(
+          (x) => x.id === b.id && x.status === "cancelled",
+        )
+      ) {
+        setConfirm(null);
+        setError("");
+        setNotice(
+          "Your place has been released. Cancellation verified with the studio.",
+        );
+      }
       setPending("");
-      await load(true);
     }
   }
   async function createSession(e: FormEvent<HTMLFormElement>) {
@@ -448,6 +532,7 @@ export default function Gym() {
       f.title = "Use between 2 and 48 characters.";
     setFields(f);
     setError("");
+    setNotice("");
     if (Object.keys(f).length) return;
     setPending("create");
     try {
@@ -472,6 +557,7 @@ export default function Gym() {
       code = String(new FormData(form).get("code")).trim().toUpperCase();
     setFields({});
     setError("");
+    setNotice("");
     if (!/^[A-HJ-NP-Z2-9]{8}$/.test(code)) {
       setFields({ code: "Enter the eight-character code." });
       return;
@@ -501,7 +587,10 @@ export default function Gym() {
       </div>
     );
   const active = bookings.filter(
-    (b) => b.status !== "cancelled" && b.start + 3600000 > now,
+    (b) =>
+      b.status !== "cancelled" &&
+      b.start + 3600000 > now &&
+      (b.status !== "waitlisted" || b.start > now),
   );
   const auth = !user;
   return (
@@ -558,7 +647,7 @@ export default function Gym() {
               </span>
               <button
                 className="text-btn"
-                disabled={pending === "logout"}
+                disabled={!!pending}
                 onClick={logout}
               >
                 Log out
@@ -786,6 +875,7 @@ export default function Gym() {
                         id="filter-date"
                         type="date"
                         value={date}
+                        disabled={!!pending}
                         onChange={(e) => {
                           setDate(e.target.value || dateKey());
                           setAllDates(false);
@@ -793,6 +883,7 @@ export default function Gym() {
                       />
                       <button
                         className={`text-btn ${allDates ? "selected" : ""}`}
+                        disabled={!!pending}
                         onClick={() => setAllDates(!allDates)}
                       >
                         {allDates ? "Show selected day" : "All upcoming"}
@@ -816,7 +907,11 @@ export default function Gym() {
                       </Empty>
                     ) : (
                       sessions.map((s) => (
-                        <article className="session-row" key={s.id}>
+                        <article
+                          className="session-row"
+                          key={s.id}
+                          data-session-id={s.id}
+                        >
                           <div className="session-info">
                             <span className="session-icon" aria-hidden="true">
                               ◎
@@ -855,7 +950,18 @@ export default function Gym() {
                             )}
                           </div>
                           <div className="session-action">
-                            {s.start <= now ? (
+                            {user.role === "admin" ? (
+                              <button
+                                className="button soft"
+                                onClick={() => {
+                                  setStaffSession(String(s.id));
+                                  navigate("admin");
+                                }}
+                                disabled={!!pending}
+                              >
+                                View register <Arrow />
+                              </button>
+                            ) : s.start <= now ? (
                               <span className="tag">
                                 {s.start + 3600000 <= now
                                   ? "Finished"
@@ -927,6 +1033,7 @@ export default function Gym() {
                         <article
                           className={`booking-card ${cancelled || past ? "past" : ""}`}
                           key={b.id}
+                          data-booking-id={b.id}
                         >
                           <div className="booking-top">
                             <span className="eyebrow">{day(b.start)}</span>
@@ -965,11 +1072,13 @@ export default function Gym() {
                                 YOUR PLACE IN LINE
                               </span>
                               <strong className="queue-number">
-                                {past ? "—" : `0${b.position}`.slice(-2)}
+                                {b.start <= now
+                                  ? "—"
+                                  : String(b.position).padStart(2, "0")}
                               </strong>
                               <small>
-                                {past
-                                  ? "This session has ended."
+                                {b.start <= now
+                                  ? "This waitlist is closed. No mat became available before the session started."
                                   : "We’ll reserve your mat automatically if one opens."}
                               </small>
                             </div>

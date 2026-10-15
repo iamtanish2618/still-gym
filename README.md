@@ -78,6 +78,8 @@ If Chrome is already installed, avoid another browser download with `CHROME_CHAN
 
 `test/browser.mjs` covers login, inline validation, waitlist joining, live promotion, cancellation/rebooking, member route protection, staff check-in/replay and 360/768/1280 layouts. `test/browser-states.mjs` covers registration, real booking/cancellation, an intercepted 409 to prove optimistic rollback, empty dates, offline recovery and keyboard focus. No browser exceptions were observed in the verified run.
 
+A second booking audit added 5 API test groups (15 total), a 500-operation invariant test, simultaneous HTTP tests against the real local D1 runtime, and browser tests for slow polling, lost responses and promotion during a join. See [BOOKING_AUDIT.md](BOOKING_AUDIT.md) for results and repeatable commands.
+
 ## How correctness works
 
 A booking inserts one row. The database trigger counts confirmed bookings within that same atomic write and aborts the twenty-first. The unique partial index covers both confirmed and waitlisted states, so a member cannot occupy both. API validation improves error messages; it is not the capacity lock.
@@ -86,7 +88,7 @@ Cancellation updates a confirmed row to cancelled. In the same database statemen
 
 Codes contain eight independently random base-32 characters (40 bits), have a unique database index, and are never exposed while waitlisted. Check-in uses one conditional UPDATE: confirmed, unchecked, and within `[session start, session start + one hour)`. A second admin trying the same code gets a conflict. Cancellation and check-in use the database clock at execution to avoid accepting a request that crossed the time boundary in transit.
 
-The client polls every three seconds while visible and immediately on window focus. It drops stale responses and pauses applying polls during mutations. Booking immediately decreases the visible count; a rejected request restores it and keeps a readable error. The server response always wins. Polling refreshes both sessions and bookings, so waitlist promotions are visible without reloads.
+The client polls every three seconds while visible and immediately on window focus. It drops stale responses, lets slow in-flight reads finish instead of continuously replacing them, and pauses applying polls during mutations. Booking immediately decreases the visible count; a rejected request restores it and keeps a readable error. Successful responses add the booking to My bookings immediately. If a booking or cancellation response is lost, the client reads back the actual member records before announcing the outcome; it never retries a write blindly. Requests time out after fifteen seconds rather than leaving controls disabled forever. The server response always wins. Polling refreshes both sessions and bookings, so waitlist promotions are visible without reloads. A waitlist closes in the UI as soon as its session starts.
 
 ## API
 
