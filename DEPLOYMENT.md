@@ -26,7 +26,7 @@ The GitHub repository is public and commits use `iamtanish2618`’s GitHub-assoc
 
 ## Verification status
 
-Released 16 October 2026 from commit `44e5a6c`. Vercel deployment: `dpl_F7E1EWw54AB7bcu1FT11rcREgbJq`.
+Initial release: 16 October 2026 from commit `44e5a6c`. Vercel deployment: `dpl_F7E1EWw54AB7bcu1FT11rcREgbJq`.
 
 The public production domain responds without Vercel authentication. Preview URLs retain Vercel’s default protection. Shared-database health passed; both migrations applied. All 23 backend groups, TypeScript and production build passed locally and in [GitHub Actions](https://github.com/iamtanish2618/still-gym/actions/runs/38907960296). Local fresh-database browser verification and 32-request production-build HTTP races passed. The audit against the public production domain also passed:
 
@@ -41,3 +41,11 @@ Operator-only repeat: `CHROME_CHANNEL=chrome node --env-file-if-exists=.env.loca
 ## Historical hosting attempt
 
 The earlier optional Sites/Cloudflare deployment failed in its migration runner before going live. Vercel replaces that hosting path; it preserves the complete SQL triggers rather than weakening booking guarantees to fit the earlier runner.
+
+## Admin member-mode update — 16 October 2026
+
+Code commit: `e4ff35c`. Deployment: `dpl_6xjGcJhGw23PqdVRCRJ1Q9sa5doT`, promoted to https://still-gym.vercel.app.
+
+All 24 backend groups, TypeScript and build passed, including [GitHub CI](https://github.com/iamtanish2618/still-gym/actions/runs/38911795189). The new local browser test verified keyboard switching, personal booking/cancellation/reload, return to staff tools, 360/768/1280 layouts, hidden controls for members and server-side staff restrictions. Slow-network booking regressions also passed.
+
+The deployed browser audit confirmed the admin-only switch and same-account booking/cancellation with the database role remaining admin. Members saw no switch. The deployed 32-request race still returned 20 confirmations and 12 conflicts, FIFO held and concurrent check-in succeeded once. Generated audit records were removed; existing accounts, sessions and bookings were preserved.
