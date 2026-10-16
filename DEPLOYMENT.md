@@ -49,3 +49,11 @@ Code commit: `e4ff35c`. Deployment: `dpl_6xjGcJhGw23PqdVRCRJ1Q9sa5doT`, promoted
 All 24 backend groups, TypeScript and build passed, including [GitHub CI](https://github.com/iamtanish2618/still-gym/actions/runs/38911795189). The new local browser test verified keyboard switching, personal booking/cancellation/reload, return to staff tools, 360/768/1280 layouts, hidden controls for members and server-side staff restrictions. Slow-network booking regressions also passed.
 
 The deployed browser audit confirmed the admin-only switch and same-account booking/cancellation with the database role remaining admin. Members saw no switch. The deployed 32-request race still returned 20 confirmations and 12 conflicts, FIFO held and concurrent check-in succeeded once. Generated audit records were removed; existing accounts, sessions and bookings were preserved.
+
+## Schedule reload fix — 16 October 2026
+
+Code commit `f6cf3e1`; deployment `dpl_6n467axzStRkX2geGHkkA3mCHfZz`, promoted to the public domain. [CI passed](https://github.com/iamtanish2618/still-gym/actions/runs/38913077908).
+
+New visits show upcoming sessions, and date/register selections persist in the URL. Local browser regressions passed for creation/reload, register selection, member mode, empty-day and all-upcoming filters, invalid-filter fallback and existing admin/member permission checks.
+
+A read-only live browser check verified all six existing sessions, preserved date/register selections after reload, and verified the member view and all-upcoming view after reload. Existing session records were compared before and after and were unchanged. No production sessions or bookings were created, edited or deleted during that verification. The temporary verification login session was revoked afterward.
