@@ -77,3 +77,5 @@ A new browser flow passed against an EMPTY real D1 database: CLI admin, UI membe
 ## UI and resilience follow-up — 16 October 2026
 
 The suite now has 21 test groups. New regressions cover streamed request limits, multibyte payloads, invalid UTF-8, malformed content types, real SQLite code collisions with bounded retries, and invalid password records. Existing capacity, FIFO, ownership and check-in rules are unchanged. Session availability visuals read the capacity returned by the API. Button press feedback has been checked in Chrome, including reduced-motion behavior.
+
+Verification note: one local browser-audit run timed out while loading the runtime JavaScript asset; the local Worker logged a delayed static-asset response. A direct follow-up fetched that asset with HTTP 200 in approximately 3.5 ms, and the complete audit rerun passed without application changes. No application exception was observed in that rerun.
