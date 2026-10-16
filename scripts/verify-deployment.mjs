@@ -138,6 +138,55 @@ try {
   console.log(
     "PASS: hosted FIFO promotion, no queue jumping, hidden waitlist codes, ownership and staff authorization.",
   );
+  const waiter = users[losers[1]];
+  const waitingBefore = (await api("/bookings", waiter.token)).data.bookings;
+  assert.equal(
+    (await api("/auth/logout", waiter.token, "POST", {})).status,
+    200,
+  );
+  assert.equal((await api("/bookings", waiter.token)).status, 401);
+  const returnedWaiter = await api("/auth/login", null, "POST", {
+    email: waiter.user.email,
+    password,
+  });
+  assert.equal(returnedWaiter.status, 200);
+  waiter.token = returnedWaiter.data.token;
+  assert.deepEqual(
+    (await api("/bookings", waiter.token)).data.bookings,
+    waitingBefore,
+  );
+  console.log(
+    "PASS: live logout/login preserves waitlist booking IDs and positions, and the old token is revoked.",
+  );
+  const finalSession = await makeSession();
+  const fill = await Promise.all(
+    users
+      .slice(0, 19)
+      .map((u) =>
+        api(`/sessions/${finalSession.id}/book`, u.token, "POST", {}),
+      ),
+  );
+  assert.ok(fill.every((r) => r.status === 201));
+  const finalPair = await Promise.all(
+    [19, 20].map((i) =>
+      api(`/sessions/${finalSession.id}/book`, users[i].token, "POST", {}),
+    ),
+  );
+  assert.deepEqual(finalPair.map((r) => r.status).sort(), [201, 409]);
+  assert.equal(
+    (
+      await db
+        .prepare(
+          "SELECT count(*) n FROM bookings WHERE session_id=? AND status='confirmed'",
+        )
+        .bind(finalSession.id)
+        .first()
+    ).n,
+    20,
+  );
+  console.log(
+    "PASS: live two-person race for the last mat yields one confirmation and one conflict, never 21.",
+  );
   const currentHour =
     Math.floor((Date.now() + 19800000) / 3600000) * 3600000 - 19800000;
   if (
@@ -166,11 +215,11 @@ try {
       ? { channel: process.env.CHROME_CHANNEL }
       : {}),
   });
-  const context = await browser.newContext({
+  let context = await browser.newContext({
       viewport: { width: 1280, height: 900 },
     }),
-    page = await context.newPage(),
-    errors = [];
+    page = await context.newPage();
+  const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(base);
   await page
@@ -197,12 +246,50 @@ try {
   );
   assert.ok(cookie?.httpOnly && cookie.secure && cookie.sameSite === "Strict");
   await page.locator("#filter-date").fill(date);
-  const row = page.locator(".session-row").filter({ hasText: title });
+  const row = page.locator(
+    `.session-row[data-session-id="${emptySession.id}"]`,
+  );
   await row.getByRole("button", { name: "Book a mat" }).click();
   await page.getByRole("link", { name: /My bookings/ }).click();
   const code = await page.locator(".booking-code").innerText();
   await page.reload();
   await page.getByText(code, { exact: true }).waitFor();
+  const preserved = (
+    await (await page.request.get(base + "/api/bookings")).json()
+  ).bookings;
+  await page.getByRole("button", { name: "Log out", exact: true }).click();
+  await page.getByLabel("Email or username").waitFor();
+  assert.equal((await page.request.get(base + "/api/bookings")).status(), 401);
+  await page.getByLabel("Email or username").fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Enter your space" }).click();
+  await page.waitForURL(/#\/sessions$/);
+  await page.getByRole("link", { name: /My bookings/ }).click();
+  await page.getByText(code, { exact: true }).waitFor();
+  assert.deepEqual(
+    (await (await page.request.get(base + "/api/bookings")).json()).bookings,
+    preserved,
+  );
+  await context.close();
+  context = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+  });
+  page = await context.newPage();
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto(base);
+  await page.getByLabel("Email or username").fill(emails[33]);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Enter your space" }).click();
+  await page.waitForURL(/#\/sessions$/);
+  await page.getByRole("link", { name: /My bookings/ }).click();
+  await page.getByText(code, { exact: true }).waitFor();
+  assert.deepEqual(
+    (await (await page.request.get(base + "/api/bookings")).json()).bookings,
+    preserved,
+  );
+  console.log(
+    "PASS: live confirmed booking ID, code and session survive reload, logout/login and a fresh browser context.",
+  );
   await page.getByRole("button", { name: "Cancel booking" }).click();
   await page.getByRole("button", { name: "Yes, release it" }).click();
   await page
@@ -227,7 +314,9 @@ try {
   await toggle.click();
   await page.locator('.mode-switch[aria-checked="true"]').waitFor();
   await page.locator("#filter-date").fill(date);
-  const adminRow = page.locator(".session-row").filter({ hasText: title });
+  const adminRow = page.locator(
+    `.session-row[data-session-id="${emptySession.id}"]`,
+  );
   await adminRow.getByRole("button", { name: "Book a mat" }).click();
   await page
     .getByRole("status")
@@ -257,6 +346,29 @@ try {
     .waitFor();
   console.log(
     "PASS: live admin-only mode switch, same-account booking/reload/cancellation, unchanged admin role, return to staff view; no switch for members.",
+  );
+  const savedSessions = (
+    await (await page.request.get(base + "/api/sessions?date=" + date)).json()
+  ).sessions;
+  await page.getByRole("button", { name: "Log out", exact: true }).click();
+  await page.getByLabel("Email or username").fill(emails[34]);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Enter your space" }).click();
+  await page.waitForURL(/#\/admin$/);
+  assert.deepEqual(
+    (await (await page.request.get(base + "/api/sessions?date=" + date)).json())
+      .sessions,
+    savedSessions,
+  );
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  assert.equal(
+    await page
+      .locator(".workspace")
+      .evaluate((el) => getComputedStyle(el).animationName),
+    "none",
+  );
+  console.log(
+    "PASS: live staff-created sessions survive staff logout/login; reduced-motion preference disables animation.",
   );
   assert.deepEqual(errors, []);
   console.log(

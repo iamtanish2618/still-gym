@@ -1,5 +1,7 @@
 # Still — Gym Slot Booking
 
+[![Verify booking system](https://github.com/iamtanish2618/still-gym/actions/workflows/ci.yml/badge.svg)](https://github.com/iamtanish2618/still-gym/actions/workflows/ci.yml)
+
 A minimal gym booking app for BYTE’s web development challenge. Members reserve one of twenty mats, join a fair waitlist, and show a short code at the door. Staff create sessions and manage attendance. Every account and booking in the live app comes from the shared database.
 
 **Live website:** [still-gym.vercel.app](https://still-gym.vercel.app)
@@ -75,7 +77,7 @@ npm run typecheck
 npm run build
 ```
 
-The 24 test groups exercise the actual handler, migrations and SQL constraints. They cover authentication/CSRF, role/ownership enforcement, username/email uniqueness, salted passwords, 32 competing bookings, duplicate prevention, FIFO promotion, execution-time boundaries, one-time check-in, lost-response retries and 500 mixed operations. The libSQL test uses **four independent connections to the same database**, checking that a newcomer cannot jump a waiting member during cancellation. An intentionally injected internal error prints `API error Error`; its response must remain safe.
+The 25 test groups exercise the actual handler, migrations and SQL constraints. They cover authentication/CSRF, role/ownership enforcement, username/email uniqueness, salted passwords, 32 competing bookings, duplicate prevention, FIFO promotion, execution-time boundaries, one-time check-in, lost-response retries and 500 mixed operations. The libSQL test uses **four independent connections to the same database**, checking that a newcomer cannot jump a waiting member during cancellation. An intentionally injected internal error prints `API error Error`; its response must remain safe.
 
 For browser regression tests, create a fresh local reviewer database and run it at port 5174 (`npm run dev -- --port 5174` with the same explicit database environment). Then:
 
@@ -163,3 +165,13 @@ Task 1 is submitted separately as [iamtanish2618/canteen-chaos](https://github.c
 Admins land on the studio desk. Turn on **Member mode** in the navigation to browse sessions and manage your own bookings; turn it off to return to staff tools. The view follows the route and survives reloads. Ordinary members never see this control. The API authorizes staff operations from the database role on every request, never from the switch or any client-supplied role.
 
 The schedule defaults to **all upcoming sessions**. Selecting a date or staff register stores that view in the URL, so refreshes and shared links preserve it. Changing the date clears the old register selection. Empty-day messages identify the selected date instead of suggesting that saved sessions disappeared. Run `npm run test:browser:schedule` against an isolated reviewer instance to verify reload behavior.
+
+## Persistence and simultaneous clicks
+
+Bookings belong to the persistent account ID, not a browser tab or login token. Logout deletes only the current token. It never deletes a user, session, booking or queue entry. Login in a fresh browser reads the same records; expired authentication requires signing in again, not booking again.
+
+`test/persistence.test.mjs` closes and reopens the actual libSQL database file without migrating or reseeding, then verifies confirmed booking IDs/codes, waitlist positions and staff-created sessions after logout, expired tokens and fresh authentication. `test/browser-persistence.mjs` verifies reload, logout/login and a new browser context against the running app. Run `npm run test:browser:persistence` with the same isolated local reviewer URL used by the other browser suites.
+
+The multi-connection libSQL regression also tests exactly two people racing for the last mat (one 201, one 409), plus concurrent duplicate clicks from one account (one booking). The existing 32-request test, FIFO tests and 500-operation invariant checks remain in place. Database triggers and unique indexes decide the result, so separate Vercel instances cannot bypass the limit.
+
+Login uses a gentle entrance transition. Pending login/booking/session creation shows a spinner; acknowledged bookings and created sessions receive a brief highlight and an animated confirmation check. Reduced-motion preferences disable animations. No animation delays a request or treats an unconfirmed action as successful.

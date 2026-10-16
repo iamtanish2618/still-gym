@@ -64,3 +64,9 @@ The public deployment at https://still-gym.vercel.app passed 32 simultaneous boo
 All six reported sessions remained in Turso. They were scheduled for 17 October, while reloading reset the in-memory date filter to 16 October. The apparent loss was a view-state bug, not deleted records.
 
 New visits now show all upcoming sessions. Applied date filters and selected staff registers are encoded in the URL and restored after reload; changing filters clears the old register selection. Empty-date messages identify the date. The new `test/browser-schedule-persistence.mjs` verifies creation/reload, selected register, switching views, empty-day persistence, all-upcoming persistence and safe invalid-filter fallback. The admin-switch browser regression also passed after this change. No database migration or production session edits are required.
+
+## Persistence and feedback review — 16 October 2026
+
+All **25 backend groups passed**. A new actual libSQL-file test closes storage, reopens it without reseeding, then authenticates again: confirmed booking IDs/codes, waitlist positions and staff-created sessions remain unchanged. Logout revokes only the token; an expired session also leaves booking data intact. Separate-client races verify two people on the final mat (one 201/one 409) and duplicate concurrent clicks (one record).
+
+The browser persistence flow passed reload, logout/login and a fresh browser context; the staff register still showed the confirmed booking while its member was logged out, and remaining capacity stayed 19. Staff sessions survived staff logout/login. Schedule-persistence and slow-network/lost-response regressions also passed. Animation feedback follows server success and respects reduced motion.

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { adaptClient } from "../server/database.mjs";
 import { handleApi } from "../server/api.mjs";
-import { hashToken } from "../server/auth.mjs";
+import { bookingCode, hashToken } from "../server/auth.mjs";
 
 test("independent libSQL clients share capacity and atomic FIFO promotion across connections", async () => {
   const dir = await mkdtemp(join(tmpdir(), "still-db-"));
@@ -124,6 +124,48 @@ test("independent libSQL clients share capacity and atomic FIFO promotion across
           .first()
       ).n,
       2,
+    );
+    // Two different members race for the final mat; exactly one succeeds.
+    await db
+      .prepare(
+        "INSERT INTO sessions(id,start,title) VALUES(2,?,'Final mat race'),(3,?,'Duplicate click race')",
+      )
+      .bind(start + 3600000, start + 7200000)
+      .run();
+    for (let i = 0; i < 19; i++)
+      await db
+        .prepare(
+          "INSERT INTO bookings(user_id,session_id,status,code,created_at) VALUES(?,2,'confirmed',?,?)",
+        )
+        .bind(i + 1, bookingCode(), Date.now())
+        .run();
+    const finalMat = await Promise.all([
+      call(19, "/sessions/2/book"),
+      call(20, "/sessions/2/book"),
+    ]);
+    assert.deepEqual(finalMat.map((r) => r.status).sort(), [201, 409]);
+    assert.equal(
+      (
+        await db
+          .prepare(
+            "SELECT count(*) n FROM bookings WHERE session_id=2 AND status='confirmed'",
+          )
+          .first()
+      ).n,
+      20,
+    );
+    const doubleClick = await Promise.all([
+      call(21, "/sessions/3/book"),
+      call(21, "/sessions/3/book"),
+    ]);
+    assert.deepEqual(doubleClick.map((r) => r.status).sort(), [201, 409]);
+    assert.equal(
+      (
+        await db
+          .prepare("SELECT count(*) n FROM bookings WHERE session_id=3")
+          .first()
+      ).n,
+      1,
     );
   } finally {
     clients.forEach((c) => c.close());

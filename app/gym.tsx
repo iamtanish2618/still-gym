@@ -155,6 +155,15 @@ export default function Gym() {
     [notice, setNotice] = useState(""),
     [pending, setPending] = useState(""),
     [fields, setFields] = useState<Fields>({});
+  const [actionCue, setActionCue] = useState<{
+    kind: "booking" | "session";
+    id: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!actionCue) return;
+    const timeout = setTimeout(() => setActionCue(null), 1100);
+    return () => clearTimeout(timeout);
+  }, [actionCue]);
   const [staffSession, setStaffSession] = useState(""),
     [roster, setRoster] = useState<Booking[]>([]),
     [rosterLoading, setRosterLoading] = useState(false),
@@ -252,6 +261,7 @@ export default function Gym() {
         requestSequence.current++;
         rosterSequence.current++;
         setUser(null);
+        setActionCue(null);
         setAuthMode("login");
         setShowPassword(false);
         setFields({});
@@ -446,6 +456,7 @@ export default function Gym() {
       requestSequence.current++;
       rosterSequence.current++;
       setUser(null);
+      setActionCue(null);
       setAuthMode("login");
       setShowPassword(false);
       setFields({});
@@ -493,6 +504,8 @@ export default function Gym() {
         d.booking,
       ]);
       setNotice(bookingMessage(d.booking));
+      if (d.booking.status !== "cancelled")
+        setActionCue({ kind: "booking", id: s.id });
     } catch (e) {
       failed = true;
       setSessions(original);
@@ -508,6 +521,7 @@ export default function Gym() {
       if (failed && recovered) {
         setError("");
         setNotice(bookingMessage(recovered));
+        setActionCue({ kind: "booking", id: s.id });
       }
       setPending("");
     }
@@ -581,6 +595,7 @@ export default function Gym() {
         method: "POST",
         body: JSON.stringify({ date, hour, title }),
       });
+      setActionCue({ kind: "session", id: Date.now() });
       setNotice("Session created. All twenty mats are ready to book.");
       setDate(date);
       setAllDates(false);
@@ -841,13 +856,21 @@ export default function Gym() {
                   >
                     {showPassword ? "Hide password" : "Show password"}
                   </button>
-                  <button className="button primary full" disabled={!!pending}>
+                  <button
+                    className="button primary full"
+                    disabled={!!pending}
+                    aria-busy={pending === "auth"}
+                  >
                     {pending === "auth"
                       ? "Opening your space…"
                       : authMode === "login"
                         ? "Enter your space"
                         : "Create your account"}
-                    <Arrow />
+                    {pending === "auth" ? (
+                      <span className="request-spinner" aria-hidden="true" />
+                    ) : (
+                      <Arrow />
+                    )}
                   </button>
                 </form>
                 <p className="auth-note">
@@ -911,8 +934,19 @@ export default function Gym() {
               </div>
             )}
             {notice && (
-              <div className="alert success" role="status">
-                {notice}
+              <div className="alert success" role="status" key={notice}>
+                <span className="success-message">
+                  <svg
+                    className="success-check"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path pathLength="1" d="m7.5 12 3 3 6-6" />
+                  </svg>
+                  <span>{notice}</span>
+                </span>
                 <button
                   aria-label="Dismiss message"
                   className="text-btn"
@@ -999,7 +1033,7 @@ export default function Gym() {
                     ) : (
                       sessions.map((s) => (
                         <article
-                          className="session-row"
+                          className={`session-row ${actionCue?.kind === "booking" && actionCue.id === s.id ? "action-pulse" : ""}`}
                           key={s.id}
                           data-session-id={s.id}
                         >
@@ -1048,13 +1082,29 @@ export default function Gym() {
                                   : "In session"}
                               </span>
                             ) : s.my_status ? (
-                              <a href="#/bookings" className="button soft">
+                              <a
+                                href="#/bookings"
+                                className="button soft"
+                                aria-busy={pending === `book-${s.id}`}
+                                aria-disabled={pending === `book-${s.id}`}
+                                onClick={(event) => {
+                                  if (pending === `book-${s.id}`)
+                                    event.preventDefault();
+                                }}
+                              >
                                 {pending === `book-${s.id}`
                                   ? "Saving…"
                                   : s.my_status === "waitlisted"
                                     ? "On the waitlist"
                                     : "You’re booked"}
-                                <span aria-hidden="true">✓</span>
+                                {pending === `book-${s.id}` ? (
+                                  <span
+                                    className="request-spinner"
+                                    aria-hidden="true"
+                                  />
+                                ) : (
+                                  <span aria-hidden="true">✓</span>
+                                )}
                               </a>
                             ) : (
                               <button
@@ -1214,7 +1264,9 @@ export default function Gym() {
             {route === "admin" && user.role === "admin" && (
               <>
                 <div className="admin-grid">
-                  <section className="panel">
+                  <section
+                    className={`panel create-panel ${actionCue?.kind === "session" ? "action-pulse" : ""}`}
+                  >
                     <span className="eyebrow">01 / MAKE SPACE</span>
                     <h2>Create a session</h2>
                     <p className="muted">
@@ -1253,9 +1305,17 @@ export default function Gym() {
                       <button
                         className="button primary full"
                         disabled={!!pending}
+                        aria-busy={pending === "create"}
                       >
                         {pending === "create" ? "Creating…" : "Create session"}
-                        <Arrow />
+                        {pending === "create" ? (
+                          <span
+                            className="request-spinner"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Arrow />
+                        )}
                       </button>
                     </form>
                   </section>
