@@ -18,7 +18,8 @@
     "test:browser:audit": "node test/browser-booking-audit.mjs",
     "test:browser:real": "node test/browser-real-backend.mjs",
     "test:live": "node test/live-booking.mjs",
-    "format": "prettier --write app server test db scripts"
+    "format": "prettier --write app server test db scripts",
+    "test:browser:admin": "node test/browser-admin-switch.mjs"
   },
   "dependencies": {
     "next": "16.4.2",

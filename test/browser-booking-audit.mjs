@@ -88,7 +88,7 @@ try {
       .getByRole("status")
       .filter({ hasText: "Your mat is reserved" })
       .waitFor();
-    await page.getByRole("alert").waitFor({ state: "hidden" });
+    await page.locator(".alert[role=alert]").waitFor({ state: "hidden" });
     await page.getByRole("link", { name: /My bookings/ }).click();
     const booking = (await api("/bookings", member.token)).data.bookings.find(
       (b) => b.session_id === target.id && b.status === "confirmed",
@@ -248,13 +248,7 @@ try {
       .waitFor();
     await page.getByRole("link", { name: "Sessions", exact: true }).click();
     const row = page.locator(".session-row").filter({ hasText: title });
-    await row.getByRole("button", { name: "View register" }).waitFor();
-    assert.equal(
-      await page
-        .getByRole("button", { name: "Book a mat", exact: true })
-        .count(),
-      0,
-    );
+    await row.getByRole("button", { name: "Book a mat" }).waitFor();
     const sessionId = Number(await row.getAttribute("data-session-id"));
     assert.equal(
       (await api(`/sessions/${sessionId}/book`, member.token, "POST", {}))
@@ -265,7 +259,8 @@ try {
       await new Promise((r) => setTimeout(r, 4500));
       await route.continue();
     });
-    await row.getByRole("button", { name: "View register" }).click();
+    await page.getByRole("switch", { name: "Member mode" }).click();
+    await page.locator(".roster-select select").selectOption(String(sessionId));
     await page
       .locator("tbody")
       .getByText("Flow Audit", { exact: true })

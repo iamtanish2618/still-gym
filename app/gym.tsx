@@ -627,21 +627,33 @@ export default function Gym() {
             >
               Sessions
             </a>
-            {user.role === "member" && (
-              <a
-                href="#/bookings"
-                aria-current={route === "bookings" ? "page" : undefined}
-              >
-                My bookings <span className="nav-count">{active.length}</span>
-              </a>
-            )}
+            <a
+              href="#/bookings"
+              aria-current={route === "bookings" ? "page" : undefined}
+            >
+              My bookings <span className="nav-count">{active.length}</span>
+            </a>
             {user.role === "admin" && (
-              <a
-                href="#/admin"
-                aria-current={route === "admin" ? "page" : undefined}
+              <button
+                className="mode-switch"
+                role="switch"
+                aria-checked={route !== "admin"}
+                aria-label="Member mode"
+                title={
+                  route === "admin"
+                    ? "Switch to booking your own sessions"
+                    : "Switch back to the studio desk"
+                }
+                disabled={!!pending}
+                onClick={() =>
+                  navigate(route === "admin" ? "sessions" : "admin")
+                }
               >
-                Studio desk
-              </a>
+                <span className="switch-track" aria-hidden="true">
+                  <span />
+                </span>
+                Member mode
+              </button>
             )}
           </nav>
         )}
@@ -988,18 +1000,7 @@ export default function Gym() {
                             )}
                           </div>
                           <div className="session-action">
-                            {user.role === "admin" ? (
-                              <button
-                                className="button soft"
-                                onClick={() => {
-                                  setStaffSession(String(s.id));
-                                  navigate("admin");
-                                }}
-                                disabled={!!pending}
-                              >
-                                View register <Arrow />
-                              </button>
-                            ) : s.start <= now ? (
+                            {s.start <= now ? (
                               <span className="tag">
                                 {s.start + 3600000 <= now
                                   ? "Finished"

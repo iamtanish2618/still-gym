@@ -284,10 +284,6 @@ async function dispatch(request, db) {
     if (user.role !== "admin")
       fail(403, "FORBIDDEN", "Only gym staff can do that.");
   };
-  const member = () => {
-    if (user.role !== "member")
-      fail(403, "FORBIDDEN", "Use a member account to book a mat.");
-  };
   if (path === "/auth/me" && method === "GET")
     return response({ user: publicUser(user) });
   if (path === "/auth/logout" && method === "POST") {
@@ -361,7 +357,7 @@ async function dispatch(request, db) {
       admin();
       if (method !== "GET") fail(405, "METHOD_NOT_ALLOWED", "Use GET.");
     } else {
-      member();
+      // Members and staff may book their own place; staff-only actions still use admin().
       if (method !== "POST") fail(405, "METHOD_NOT_ALLOWED", "Use POST.");
     }
     const session = await query(
@@ -421,7 +417,6 @@ async function dispatch(request, db) {
   }
   match = path.match(/^\/bookings\/([^/]+)$/);
   if (match && method === "DELETE") {
-    member();
     const bookingId = id(match[1]),
       booking = await query(
         "SELECT * FROM bookings WHERE id=?",

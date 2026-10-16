@@ -75,13 +75,14 @@ npm run typecheck
 npm run build
 ```
 
-The 23 test groups exercise the actual handler, migrations and SQL constraints. They cover authentication/CSRF, role/ownership enforcement, username/email uniqueness, salted passwords, 32 competing bookings, duplicate prevention, FIFO promotion, execution-time boundaries, one-time check-in, lost-response retries and 500 mixed operations. The libSQL test uses **four independent connections to the same database**, checking that a newcomer cannot jump a waiting member during cancellation. An intentionally injected internal error prints `API error Error`; its response must remain safe.
+The 24 test groups exercise the actual handler, migrations and SQL constraints. They cover authentication/CSRF, role/ownership enforcement, username/email uniqueness, salted passwords, 32 competing bookings, duplicate prevention, FIFO promotion, execution-time boundaries, one-time check-in, lost-response retries and 500 mixed operations. The libSQL test uses **four independent connections to the same database**, checking that a newcomer cannot jump a waiting member during cancellation. An intentionally injected internal error prints `API error Error`; its response must remain safe.
 
 For browser regression tests, create a fresh local reviewer database and run it at port 5174 (`npm run dev -- --port 5174` with the same explicit database environment). Then:
 
 ```sh
 TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser
 TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser:audit
+TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser:admin
 TEST_URL=http://127.0.0.1:5174 npm run test:live
 ```
 
@@ -138,7 +139,7 @@ Errors use `{ "error": { "code": "...", "message": "...", "fields": {} } }`. Inv
 
 - Gym times use **Asia/Kolkata (IST)**; stored timestamps are UTC milliseconds. Starts align to IST hours.
 - Every session lasts one hour and has twenty mats; these are required business rules, not placeholder records.
-- Staff create sessions up to one year ahead. Members can book distinct sessions; staff use a separate member account to book.
+- Staff create sessions up to one year ahead. Members can book distinct sessions; staff can use the admin-only **Member mode** switch to book with their existing account. Switching views never changes the stored role.
 - Waitlists are full-only; cancellation/departure stop at start. Expired queues never promote.
 - Rebooking creates a fresh code; cancelled bookings remain history. Check-in has no grace period.
 - Live updates normally arrive within three seconds while connected. Background tabs refresh on focus.
@@ -158,3 +159,5 @@ Restrained typography, neutral/sage surfaces and generous spacing follow the sup
 AI assistance was used with the candidate’s stated permission from the society. The candidate should understand the code and be prepared to modify it during the walkthrough; no claim of unaided authorship is made. Git commits use the repository owner’s verified GitHub identity.
 
 Task 1 is submitted separately as [iamtanish2618/canteen-chaos](https://github.com/iamtanish2618/canteen-chaos), with its own debugging log and regression tests.
+
+Admins land on the studio desk. Turn on **Member mode** in the navigation to browse sessions and manage your own bookings; turn it off to return to staff tools. The view follows the route and survives reloads. Ordinary members never see this control. The API authorizes staff operations from the database role on every request, never from the switch or any client-supplied role.

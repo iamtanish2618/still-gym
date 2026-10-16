@@ -59,7 +59,7 @@ npm run typecheck
 npm run build
 ```
 
-The 23 automated test groups use isolated databases and do not alter the demo data. One test deliberately injects an internal error and verifies the safe response; its `API error Error` log is expected.
+The 24 automated test groups use isolated databases and do not alter the demo data. One test deliberately injects an internal error and verifies the safe response; its `API error Error` log is expected.
 
 For browser and real HTTP/libSQL audits, follow the separate local-database commands in [BOOKING_AUDIT.md](BOOKING_AUDIT.md#repeat-the-checks). The browser tests modify fixtures and the check-in tests consume the active code, so each fresh run's data requirements are documented.
 
@@ -75,3 +75,5 @@ The results demonstrate correctness under the tested races and failures. They ar
 Task 1 is submitted separately as the [public Canteen Chaos fork](https://github.com/iamtanish2618/canteen-chaos), with its own debugging log and regression tests.
 
 For a full flow without demo data, see [Clean-database backend verification](README.md#clean-database-backend-verification). Normal UI/API requests always query the persistent database.
+
+Admins can turn on **Member mode** to book sessions and manage their own bookings without another account. Turn it off to return to the studio desk. The switch never changes database roles and is hidden from members. The API test suite and `test/browser-admin-switch.mjs` verify same-account booking and staff-access restrictions.

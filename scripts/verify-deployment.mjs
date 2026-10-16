@@ -214,6 +214,50 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Enter your space" }).click();
   await page.waitForURL(/#\/sessions$/);
+  assert.equal(
+    await page.getByRole("switch", { name: "Member mode" }).count(),
+    0,
+  );
+  await page.getByRole("button", { name: "Log out", exact: true }).click();
+  await page.getByLabel("Email or username").fill(emails[34]);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Enter your space" }).click();
+  await page.waitForURL(/#\/admin$/);
+  const toggle = page.getByRole("switch", { name: "Member mode" });
+  await toggle.click();
+  await page.locator('.mode-switch[aria-checked="true"]').waitFor();
+  await page.locator("#filter-date").fill(date);
+  const adminRow = page.locator(".session-row").filter({ hasText: title });
+  await adminRow.getByRole("button", { name: "Book a mat" }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Your mat is reserved" })
+    .waitFor();
+  await page.getByRole("link", { name: /My bookings/ }).click();
+  const staffCode = await page.locator(".booking-code").innerText();
+  await page.reload();
+  await page.getByText(staffCode, { exact: true }).waitFor();
+  assert.equal(
+    (await (await page.request.get(base + "/api/auth/me")).json()).user.role,
+    "admin",
+  );
+  await page.screenshot({
+    path: ".sites-runtime/screenshots/live-admin-member-switch.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Cancel booking" }).click();
+  await page.getByRole("button", { name: "Yes, release it" }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Booking cancelled" })
+    .waitFor();
+  await toggle.click();
+  await page
+    .getByRole("heading", { name: "Create a session", exact: true })
+    .waitFor();
+  console.log(
+    "PASS: live admin-only mode switch, same-account booking/reload/cancellation, unchanged admin role, return to staff view; no switch for members.",
+  );
   assert.deepEqual(errors, []);
   console.log(
     "PASS: live browser signup, password confirmation, secure HttpOnly cookie, real booking/reload/cancellation, logout and username login; no browser exceptions.",
