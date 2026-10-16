@@ -10,11 +10,11 @@ This guide makes the core booking flow easy to inspect and reproduce. The [READM
 
 Follow [the optional reviewer setup](README.md#optional-reviewer-dataset). Normal setup starts empty. The explicit reviewer fixture creates sessions relative to today, including a full session and a currently running session for check-in. No hosting account or private application credential is required for local use.
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Member | `aanya@still.demo` | `StillDemo2026!` |
+| Role          | Email                | Password         |
+| ------------- | -------------------- | ---------------- |
+| Member        | `aanya@still.demo`   | `StillDemo2026!` |
 | Second member | `member1@still.demo` | `StillDemo2026!` |
-| Admin | `admin@still.demo` | `StillDemo2026!` |
+| Admin         | `admin@still.demo`   | `StillDemo2026!` |
 
 These are public demo accounts.
 
@@ -32,36 +32,36 @@ Browser sessions use HttpOnly cookies. Use separate browser profiles or private 
 
 ## Verify the requirements
 
-| Requirement | What to inspect or try | Automated evidence |
-| --- | --- | --- |
-| Hashed passwords, unique email, token login, database-created admin | Register a member; duplicate email and supplied admin role fail | [API tests](test/api.test.mjs), [cookie auth tests](test/auth-sessions.test.mjs) |
-| Hourly sessions, unique start, exactly 20 mats | Admin session form; duplicate start and invalid capacity fail | [API tests](test/api.test.mjs), [schema](db/schema.ts) |
-| Never 21 confirmed bookings | Race requests against a nearly/full session; the database decides | [Real HTTP/libSQL audit](test/live-booking.mjs): 32 requests, 20 confirmations, 12 conflicts |
-| One active booking; cancel before start; rebook | Repeat a booking, cancel it and rebook | [Invariant tests](test/booking-invariants.test.mjs), partial unique index in [migration](drizzle/0000_shallow_paibok.sql) |
-| Full-only waitlist, positions, leave queue, FIFO promotion | Use the two-member demonstration above | [API tests](test/api.test.mjs), [HTTP/libSQL audit](test/live-booking.mjs) |
-| No promotion after start; exact booking/cancellation boundaries | Inspect execution-time SQL guards | [Boundary and crossing-request tests](test/booking-invariants.test.mjs) |
-| Random code, only once, during its hour, never cancelled | Admin check-in; try replay, future and cancelled codes | [API tests](test/api.test.mjs), [HTTP/libSQL audit](test/live-booking.mjs) |
-| Members see only their own data; admin sees session register | Use separate accounts and call protected endpoints | [API tests](test/api.test.mjs) |
-| Server validation, consistent errors, global handler | Send invalid requests; no stack trace is returned | [API tests](test/api.test.mjs), [handler](server/api.mjs) |
-| Protected routes, labels, keyboard use, mobile layout | Member admin URL; keyboard skip link; 360px viewport | [Browser smoke](test/browser.mjs), [state tests](test/browser-states.mjs) |
-| Loading, error, empty and success states; optimistic rollback | Empty date, offline connection, rejected booking | [Browser state tests](test/browser-states.mjs) |
-| Live updates and recovery under adverse connections | Leave a waitlist open; delay or drop an HTTP response | [Browser booking audit](test/browser-booking-audit.mjs) |
-| Real related database tables and seed data | Inspect users, sessions, bookings, tokens and rate limits | [Schema](db/schema.ts), [optional reviewer fixture](test/fixtures/demo-seed.mjs), local SQLite setup |
-| Public repo, commit history, setup, credentials, assumptions, environment example | Inspect GitHub history, README and `.env.example` | [README](README.md), [.env.example](.env.example) |
+| Requirement                                                                       | What to inspect or try                                            | Automated evidence                                                                                                              |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Hashed passwords, unique email, token login, database-created admin               | Register a member; duplicate email and supplied admin role fail   | [API tests](tests/unit/accounts.test.mjs), [cookie auth tests](tests/unit/auth-sessions.test.mjs)                               |
+| Hourly sessions, unique start, exactly 20 mats                                    | Admin session form; duplicate start and invalid capacity fail     | [API tests](tests/unit/sessions.test.mjs), [schema](db/schema.ts)                                                               |
+| Never 21 confirmed bookings                                                       | Race requests against a nearly/full session; the database decides | [Real HTTP/libSQL audit](tests/browser/live-booking.mjs): 32 requests, 20 confirmations, 12 conflicts                           |
+| One active booking; cancel before start; rebook                                   | Repeat a booking, cancel it and rebook                            | [Invariant tests](tests/unit/booking-invariants.test.mjs), partial unique index in [migration](drizzle/0000_shallow_paibok.sql) |
+| Full-only waitlist, positions, leave queue, FIFO promotion                        | Use the two-member demonstration above                            | [API tests](tests/unit/booking-flow.test.mjs), [HTTP/libSQL audit](tests/browser/live-booking.mjs)                              |
+| No promotion after start; exact booking/cancellation boundaries                   | Inspect execution-time SQL guards                                 | [Boundary and crossing-request tests](tests/unit/booking-invariants.test.mjs)                                                   |
+| Random code, only once, during its hour, never cancelled                          | Admin check-in; try replay, future and cancelled codes            | [API tests](tests/unit/checkin.test.mjs), [HTTP/libSQL audit](tests/browser/live-booking.mjs)                                   |
+| Members see only their own data; admin sees session register                      | Use separate accounts and call protected endpoints                | [API tests](tests/unit/admin-member.test.mjs)                                                                                   |
+| Server validation, consistent errors, global handler                              | Send invalid requests; no stack trace is returned                 | [API tests](tests/unit/errors.test.mjs), [handler](server/api.mjs)                                                              |
+| Protected routes, labels, keyboard use, mobile layout                             | Member admin URL; keyboard skip link; 360px viewport              | [Browser smoke](tests/browser/browser.mjs), [state tests](tests/browser/browser-states.mjs)                                     |
+| Loading, error, empty and success states; optimistic rollback                     | Empty date, offline connection, rejected booking                  | [Browser state tests](tests/browser/browser-states.mjs)                                                                         |
+| Live updates and recovery under adverse connections                               | Leave a waitlist open; delay or drop an HTTP response             | [Browser booking audit](tests/browser/browser-booking-audit.mjs)                                                                |
+| Real related database tables and seed data                                        | Inspect users, sessions, bookings, tokens and rate limits         | [Schema](db/schema.ts), [optional reviewer fixture](tests/fixtures/demo-seed.mjs), local SQLite setup                           |
+| Public repo, commit history, setup, credentials, assumptions, environment example | Inspect GitHub history, README and `.env.example`                 | [README](README.md), [.env.example](.env.example)                                                                               |
 
 ## Run the checks yourself
 
 After `npm ci`:
 
 ```sh
-npm test
-npm run typecheck
-npm run build
+npx playwright install chromium
+npm run test:all
+npm run format:check
 ```
 
-The 25 automated test groups use isolated databases and do not alter the demo data. One test deliberately injects an internal error and verifies the safe response; its `API error Error` log is expected.
+The 35 automated test groups use isolated databases and do not alter the demo data. One test deliberately injects an internal error and verifies the safe response; its `API error Error` log is expected.
 
-For browser and real HTTP/libSQL audits, follow the separate local-database commands in [BOOKING_AUDIT.md](BOOKING_AUDIT.md#repeat-the-checks). The browser tests modify fixtures and the check-in tests consume the active code, so each fresh run's data requirements are documented.
+The complete browser runner creates a separate local database/server for each suite, including a no-seed end-to-end flow. It never uses production storage. The older manual commands and historical findings remain in [BOOKING_AUDIT.md](BOOKING_AUDIT.md#repeat-the-checks).
 
 The results demonstrate correctness under the tested races and failures. They are not a throughput or production-scale performance benchmark. The underlying database rules and source are available for independent review.
 
@@ -69,13 +69,14 @@ The results demonstrate correctness under the tested races and failures. They ar
 
 - [Booking API and authorization](server/api.mjs): reservation, cancellation, own bookings, staff register and check-in.
 - [Database rules](drizzle/0000_shallow_paibok.sql): atomic capacity guard, unique active booking and cancellation-triggered FIFO promotion.
-- [Member and staff UI](app/gym.tsx): protected routes, optimistic updates, polling and reconciliation.
+- [UI entry point](app/gym.tsx), [views](app/components/) and [hooks](app/hooks/): protected routes, optimistic updates, polling and reconciliation.
+- [Architecture walkthrough](ARCHITECTURE.md) and [complete test runner](tests/README.md): module responsibilities and repeatable verification.
 - [Booking audit](BOOKING_AUDIT.md): failures reproduced, fixes made and exact verification scope.
 
 Task 1 is submitted separately as the [public Canteen Chaos fork](https://github.com/iamtanish2618/canteen-chaos), with its own debugging log and regression tests.
 
 For a full flow without demo data, see [Clean-database backend verification](README.md#clean-database-backend-verification). Normal UI/API requests always query the persistent database.
 
-Admins can turn on **Member mode** to book sessions and manage their own bookings without another account. Turn it off to return to the studio desk. The switch never changes database roles and is hidden from members. The API test suite and `test/browser-admin-switch.mjs` verify same-account booking and staff-access restrictions.
+Admins can turn on **Member mode** to book sessions and manage their own bookings without another account. Turn it off to return to the studio desk. The switch never changes database roles and is hidden from members. The API test suite and `tests/browser/browser-admin-switch.mjs` verify same-account booking and staff-access restrictions.
 
-For persistence review: book a future session, note its code, reload, log out and log back in. The same booking ID/code must remain; opening a fresh browser and logging in must show it too. Staff-created sessions likewise remain after staff logout. See `test/persistence.test.mjs` and `test/browser-persistence.mjs`. The four-connection regression includes a two-person final-mat race and a same-user double-click race.
+For persistence review: book a future session, note its code, reload, log out and log back in. The same booking ID/code must remain; opening a fresh browser and logging in must show it too. Staff-created sessions likewise remain after staff logout. See `tests/unit/persistence.test.mjs` and `tests/browser/browser-persistence.mjs`. The four-connection regression includes a two-person final-mat race and a same-user double-click race.

@@ -6,7 +6,7 @@ A minimal gym booking app for BYTE’s web development challenge. Members reserv
 
 **Live website:** [still-gym.vercel.app](https://still-gym.vercel.app)
 
-**Repository:** [iamtanish2618/still-gym](https://github.com/iamtanish2618/still-gym) · **Review:** [reviewer guide](REVIEW_GUIDE.md) · **Hosting:** [deployment notes](DEPLOYMENT.md)
+**Repository:** [iamtanish2618/still-gym](https://github.com/iamtanish2618/still-gym) · **Review:** [reviewer guide](REVIEW_GUIDE.md) · [submission checklist](SUBMISSION_CHECKLIST.md) · **Hosting:** [deployment notes](DEPLOYMENT.md)
 
 ![Still member schedule](docs/screenshots/schedule-preview.png)
 
@@ -50,14 +50,14 @@ Passwords, tokens, environment files and database files stay outside Git. `admin
 
 ## Optional reviewer dataset
 
-The brief requests test credentials and sessions including a full one. These exist exclusively in [the opt-in fixture](test/fixtures/demo-seed.mjs), loaded by `db:seed:demo` into an empty **local** database. The command refuses hosted databases and existing accounts. Production starts empty; real members sign up and staff create sessions.
+The brief requests test credentials and sessions including a full one. These exist exclusively in [the opt-in fixture](tests/fixtures/demo-seed.mjs), loaded by `db:seed:demo` into an empty **local** database. The command refuses hosted databases and existing accounts. Production starts empty; real members sign up and staff create sessions.
 
-| Role | Email | Local fixture password |
-| --- | --- | --- |
-| Admin | `admin@still.demo` | `StillDemo2026!` |
-| Member | `aanya@still.demo` | `StillDemo2026!` |
-| Member | `kabir@still.demo` | `StillDemo2026!` |
-| Member in full session | `member1@still.demo` | `StillDemo2026!` |
+| Role                   | Email                | Local fixture password |
+| ---------------------- | -------------------- | ---------------------- |
+| Admin                  | `admin@still.demo`   | `StillDemo2026!`       |
+| Member                 | `aanya@still.demo`   | `StillDemo2026!`       |
+| Member                 | `kabir@still.demo`   | `StillDemo2026!`       |
+| Member in full session | `member1@still.demo` | `StillDemo2026!`       |
 
 These are public **local fixture credentials**, never live credentials. The fixture creates 23 users, 26 sessions, one full session, partially occupied sessions and an active check-in example. Dates are relative to seeding. The screenshot gallery shows this separate reviewer dataset.
 
@@ -72,23 +72,17 @@ These are public **local fixture credentials**, never live credentials. The fixt
 ## Verification
 
 ```sh
-npm test
-npm run typecheck
-npm run build
+npm ci
+npx playwright install chromium
+npm run test:all
+npm run format:check
 ```
 
-The 25 test groups exercise the actual handler, migrations and SQL constraints. They cover authentication/CSRF, role/ownership enforcement, username/email uniqueness, salted passwords, 32 competing bookings, duplicate prevention, FIFO promotion, execution-time boundaries, one-time check-in, lost-response retries and 500 mixed operations. The libSQL test uses **four independent connections to the same database**, checking that a newcomer cannot jump a waiting member during cancellation. An intentionally injected internal error prints `API error Error`; its response must remain safe.
+With installed Chrome, use `CHROME_CHANNEL=chrome npm run test:all` and omit the Chromium install. The full command runs TypeScript, ESLint, coverage, a production build and all nine browser/HTTP suites. The runner gives every suite a fresh database/server and explicitly clears remote database credentials; no manual seed/reset is needed. CI repeats these checks on Node 24.
 
-For browser regression tests, create a fresh local reviewer database and run it at port 5174 (`npm run dev -- --port 5174` with the same explicit database environment). Then:
+The 35 Node test groups cover the actual API, SQL constraints, authentication/CSRF, roles/ownership, shared rate limits, validation, concurrent booking, FIFO promotion, exact session boundaries, one-time check-in, lost-response recovery, migrations, storage and IST formatting. Four independent libSQL connections share the same database in the concurrency test; a deterministic 500-operation test checks invariants after every change. Browser tests cover login/signup, persistence, optimistic rollback, offline/slow responses, admin member mode, keyboard/mobile layouts and automated WCAG A/AA checks.
 
-```sh
-TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser
-TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser:audit
-TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser:admin
-TEST_URL=http://127.0.0.1:5174 npm run test:live
-```
-
-If Chrome is unavailable, run `npx playwright install chromium` and omit `CHROME_CHANNEL`. Browser tests check 360/768/1280 layouts, keyboard focus, signup, booking, waitlist promotion, optimistic rollback, offline recovery, slow polling, lost responses and staff registers. The HTTP audit checks 32 competing requests and check-in races. Tests modify only their isolated fixtures; check-in consumes the active code, so start with fresh data for a complete repeat.
+See [tests/README.md](tests/README.md) for commands, isolation guarantees and coverage scope, and [ARCHITECTURE.md](ARCHITECTURE.md) for the modular code walkthrough. `npm test` runs the fast Node suite; `npm run test:coverage` prints measured backend coverage. An intentionally injected internal error logs `API error Error`; its response must remain safe. The older single-suite commands remain available for an already-running isolated local app.
 
 ### Clean-database backend verification
 
@@ -119,21 +113,21 @@ Production instances all access the same remote primary through `@libsql/client`
 
 Authenticated browsers use an HttpOnly, SameSite=Strict cookie, Secure on HTTPS, with seven-day expiry. Login/register with `X-Still-Client: browser` sets the cookie and omits the token from JSON. Non-browser clients receive an opaque token and use `Authorization: Bearer <token>`. Tokens are stored only as SHA-256 digests. Foreign-origin writes are rejected; cookie writes require matching Origin and the application header. Logout revokes the token and clears the cookie.
 
-| Method / route | Access | Purpose |
-| --- | --- | --- |
-| POST `/api/auth/register` | Public | `{name,username,email,password}`; create member |
-| POST `/api/auth/login` | Public | `{email,password}`; `email` accepts email or username |
-| GET `/api/health` | Public | Database health and server time |
-| GET `/api/auth/me` | Authenticated | Current identity |
-| POST `/api/auth/logout` | Authenticated | Revoke session |
-| GET `/api/sessions?date=YYYY-MM-DD` | Authenticated | Sessions and availability, optional IST date |
-| POST `/api/sessions` | Admin | `{date,hour,title}`; capacity is always 20 |
-| POST `/api/sessions/:id/book` | Member | `{}`; reserve |
-| POST `/api/sessions/:id/waitlist` | Member | `{}`; queue for a full session |
-| GET `/api/bookings` | Authenticated | Own bookings only |
-| DELETE `/api/bookings/:id` | Owner member | Cancel/leave queue before start |
-| GET `/api/sessions/:id/bookings` | Admin | Register and attendance |
-| POST `/api/check-in` | Admin | `{code}`; check in once |
+| Method / route                      | Access        | Purpose                                               |
+| ----------------------------------- | ------------- | ----------------------------------------------------- |
+| POST `/api/auth/register`           | Public        | `{name,username,email,password}`; create member       |
+| POST `/api/auth/login`              | Public        | `{email,password}`; `email` accepts email or username |
+| GET `/api/health`                   | Public        | Database health and server time                       |
+| GET `/api/auth/me`                  | Authenticated | Current identity                                      |
+| POST `/api/auth/logout`             | Authenticated | Revoke session                                        |
+| GET `/api/sessions?date=YYYY-MM-DD` | Authenticated | Sessions and availability, optional IST date          |
+| POST `/api/sessions`                | Admin         | `{date,hour,title}`; capacity is always 20            |
+| POST `/api/sessions/:id/book`       | Member        | `{}`; reserve                                         |
+| POST `/api/sessions/:id/waitlist`   | Member        | `{}`; queue for a full session                        |
+| GET `/api/bookings`                 | Authenticated | Own bookings only                                     |
+| DELETE `/api/bookings/:id`          | Owner member  | Cancel/leave queue before start                       |
+| GET `/api/sessions/:id/bookings`    | Admin         | Register and attendance                               |
+| POST `/api/check-in`                | Admin         | `{code}`; check in once                               |
 
 Errors use `{ "error": { "code": "...", "message": "...", "fields": {} } }`. Invalid inputs return 400/422, missing authentication 401, forbidden roles 403, absent/unowned records 404, conflicts 409, throttling 429, unexpected errors a safe 500, and temporary unavailability 503. Creation returns 201. JSON bodies are bounded to 8 KiB by bytes, including streamed requests.
 
@@ -170,7 +164,7 @@ The schedule defaults to **all upcoming sessions**. Selecting a date or staff re
 
 Bookings belong to the persistent account ID, not a browser tab or login token. Logout deletes only the current token. It never deletes a user, session, booking or queue entry. Login in a fresh browser reads the same records; expired authentication requires signing in again, not booking again.
 
-`test/persistence.test.mjs` closes and reopens the actual libSQL database file without migrating or reseeding, then verifies confirmed booking IDs/codes, waitlist positions and staff-created sessions after logout, expired tokens and fresh authentication. `test/browser-persistence.mjs` verifies reload, logout/login and a new browser context against the running app. Run `npm run test:browser:persistence` with the same isolated local reviewer URL used by the other browser suites.
+`tests/unit/persistence.test.mjs` closes and reopens the actual libSQL database file without migrating or reseeding, then verifies confirmed booking IDs/codes, waitlist positions and staff-created sessions after logout, expired tokens and fresh authentication. `tests/browser/browser-persistence.mjs` verifies reload, logout/login and a new browser context against the running app. Run `npm run test:browser:persistence` with the same isolated local reviewer URL used by the other browser suites.
 
 The multi-connection libSQL regression also tests exactly two people racing for the last mat (one 201, one 409), plus concurrent duplicate clicks from one account (one booking). The existing 32-request test, FIFO tests and 500-operation invariant checks remain in place. Database triggers and unique indexes decide the result, so separate Vercel instances cannot bypass the limit.
 
