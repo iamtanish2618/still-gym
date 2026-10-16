@@ -1,0 +1,11 @@
+.env*
+!.env.example
+.local
+.sites-runtime
+.agents
+.codex
+work
+outputs
+test
+docs/screenshots
+*.tsbuildinfo

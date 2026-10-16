@@ -30,6 +30,7 @@ test("browser registration uses an HttpOnly cookie, restores identity, blocks CS
       origin: "https://gym.example",
       body: {
         name: "Real User",
+        username: "real_user",
         email: "real@example.org",
         password: "RealPassword2026!",
       },
@@ -100,6 +101,7 @@ test("cross-site login is rejected and plain HTTP local cookies avoid a Secure-o
   try {
     const body = JSON.stringify({
       name: "Local User",
+      username: "local_user",
       email: "local@example.org",
       password: "LocalPassword2026!",
     });

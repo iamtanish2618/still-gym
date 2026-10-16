@@ -24,6 +24,7 @@ async function api(path, token, method = "GET", body) {
 const member = (
   await api("/auth/register", null, "POST", {
     name: "Flow Audit",
+    username: `flow_${Date.now()}`,
     email: `flow-${Date.now()}@test.local`,
     password: "FlowAudit2026!",
   })
@@ -117,7 +118,7 @@ try {
     assert.equal(await card.locator(".booking-code").count(), 0);
     await context.close();
     console.log(
-      "PASS: lost booking/cancellation responses reconcile with real D1 state, no duplicate reservation, code survives reload and disappears after cancellation.",
+      "PASS: lost booking/cancellation responses reconcile with real SQL state, no duplicate reservation, code survives reload and disappears after cancellation.",
     );
   }
   // A queue entry can be promoted while the join response is travelling back.

@@ -20,7 +20,7 @@ const shot = (name) =>
   page.screenshot({ path: `${screenshotDir}/${name}.png`, fullPage: true });
 async function login(email) {
   await page.goto(base);
-  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Email or username").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("StillDemo2026!");
   await page.getByRole("button", { name: "Enter your space" }).click();
   await page.waitForURL(/#\/(sessions|admin)$/);
@@ -41,7 +41,7 @@ try {
   await page.getByRole("heading", { name: "Welcome back." }).waitFor();
   await shot("login-desktop");
   await page.getByRole("button", { name: "Enter your space" }).click();
-  await page.getByText("Enter a valid email address.").waitFor();
+  await page.getByText("Enter your email or username.").waitFor();
   await login("aanya@still.demo");
   await page.locator(".session-row").first().waitFor();
   await page.getByRole("button", { name: "All upcoming", exact: true }).click();
@@ -130,7 +130,7 @@ try {
   }
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("button", { name: "Log out", exact: true }).click();
-  await page.getByLabel("Email address").waitFor();
+  await page.getByLabel("Email or username").waitFor();
   await login("admin@still.demo");
   await page
     .getByRole("heading", { name: "Create a session", exact: true })

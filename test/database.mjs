@@ -44,10 +44,8 @@ export function database(path = ":memory:") {
   };
 }
 export function migrate(db) {
-  db.sqlite.exec(
-    readFileSync(
-      new URL("../drizzle/0000_shallow_paibok.sql", import.meta.url),
-      "utf8",
-    ),
-  );
+  for (const name of ["0000_shallow_paibok.sql", "0001_usernames.sql"])
+    db.sqlite.exec(
+      readFileSync(new URL(`../drizzle/${name}`, import.meta.url), "utf8"),
+    );
 }

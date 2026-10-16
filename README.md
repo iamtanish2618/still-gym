@@ -1,87 +1,69 @@
 # Still — Gym Slot Booking
 
-A minimal gym booking app for BYTE’s web development challenge. Members reserve one of twenty mats, join a fair waitlist, and show a short code at the door. Staff manage sessions and attendance.
+A minimal gym booking app for BYTE’s web development challenge. Members reserve one of twenty mats, join a fair waitlist, and show a short code at the door. Staff create sessions and manage attendance. Every account and booking in the live app comes from the shared database.
 
-**Task 2 repository:** https://github.com/iamtanish2618/still-gym
-
-**Reviewers: [start here](REVIEW_GUIDE.md)** for demo accounts, the main booking demonstration, and a requirement-to-test checklist.
+**Repository:** [iamtanish2618/still-gym](https://github.com/iamtanish2618/still-gym) · **Review:** [reviewer guide](REVIEW_GUIDE.md) · **Hosting:** [deployment notes](DEPLOYMENT.md)
 
 ![Still member schedule](docs/screenshots/schedule-preview.png)
 
 ## Stack and data model (8 lines)
 
-1. React + TypeScript frontend, with plain responsive CSS and protected hash routes.
-2. Vinext serves the UI and a same-origin REST API on Cloudflare Workers.
-3. Cloudflare D1 is a real SQLite database; Drizzle describes the five related tables.
-4. `users` holds normalized unique emails, salted password hashes and database-assigned roles.
-5. `sessions` has unique start timestamps and a CHECK constraint fixing capacity at 20.
-6. `bookings` stores confirmation/waitlist/cancellation state, random code and attendance timestamp.
+1. React + TypeScript frontend, responsive CSS and protected hash routes.
+2. Next.js serves the UI and same-origin REST API on Vercel Node.js Functions.
+3. Turso/libSQL provides shared persistent SQL storage; local development uses a SQLite file.
+4. `users` holds unique normalized usernames/emails, salted password hashes and server-assigned roles.
+5. `sessions` has unique IST hour starts and a CHECK constraint fixing capacity at 20.
+6. `bookings` stores booking state, random code and attendance timestamp.
 7. A partial unique index prevents duplicate active bookings; triggers guard capacity and promote FIFO atomically.
-8. `tokens` stores SHA-256 digests of expiring opaque tokens; `rate_limits` limits authentication and check-in attempts.
+8. `tokens` stores digests of expiring opaque tokens; `rate_limits` provides shared authentication/check-in throttling.
 
 ## Quick start
 
-Requires **Node.js 22.13+**, npm and Git. No Cloudflare account is required for local use.
+Requires **Node.js 22.13+** (Vercel uses Node 24), npm and Git. No cloud account is needed for local use.
 
 ```sh
 git clone https://github.com/iamtanish2618/still-gym.git
 cd still-gym
 npm ci
-npm run build
 npm run db:migrate
 npm run admin:create
 npm run dev
 ```
 
-**Normal setup is empty.** It creates no predefined users, sessions or bookings. `admin:create` asks for your name, email and a hidden password, hashes the password and inserts the admin directly into the local database. It refuses duplicate emails instead of silently changing an existing account. Members register through the UI; an admin creates real sessions through the studio desk. Registration never accepts an admin role.
+Open `http://127.0.0.1:5173`. Normal setup creates **no predefined users, sessions or bookings**. The admin CLI asks for your name, email and a hidden password. It hashes that password and inserts an admin through a trusted database connection; it refuses an existing email. Public signup only creates members, with a chosen username, email and password. Login accepts either email or username. The client confirms passwords before submitting and can show/hide them.
 
-Open the Local URL printed by the server, normally `http://127.0.0.1:5173`. UI and API share the origin. Build before migrating because the build generates Wrangler’s local configuration. Migrations are repeatable; local data persists across restarts. No mock identity authorizes requests, no fallback user is used, and no database seed runs on app startup.
+Local data persists in `.local/still.db`. To use a separate file, pass the same `LOCAL_DATABASE_PATH` to migration, admin creation and the server. An existing database is never reset automatically. Migrations apply complete SQL statements transactionally and record checksums. Applied migrations cannot silently change.
 
-By default all local commands use `.wrangler/state`. To use another local database, set the **same `LOCAL_DB_DIR`** for migration, admin creation and server startup. Example:
+`.env.example` lists configuration names. Server scripts and Next.js load `.env.local`; **if Turso credentials are present, they use that shared database**. For an isolated local database after pulling Vercel variables, explicitly clear the two remote variables:
 
 ```sh
-LOCAL_DB_DIR=.wrangler/live npm run db:migrate
-LOCAL_DB_DIR=.wrangler/live npm run admin:create
-LOCAL_DB_DIR=.wrangler/live npm run dev
+TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= LOCAL_DATABASE_PATH=.sites-runtime/reviewer.db npm run db:migrate
+TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= LOCAL_DATABASE_PATH=.sites-runtime/reviewer.db npm run db:seed:demo
+TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= LOCAL_DATABASE_PATH=.sites-runtime/reviewer.db npm run dev
 ```
 
-An existing database is never reset or overwritten automatically. `.env.example` documents optional settings; pass `LOCAL_DB_DIR` in the shell as shown. Real passwords, database files and runtime state remain outside Git. The local CLI accepts JSON through standard input for automated provisioning; passwords must never be command-line arguments.
+Passwords, tokens, environment files and database files stay outside Git. `admin:create` also accepts JSON on standard input for automation; never pass passwords as command-line arguments. No admin bootstrap, seed or reset endpoint is exposed over HTTP.
 
 ## Optional reviewer dataset
 
-The brief asks for test credentials and sessions including a full one. Those records live exclusively in `test/fixtures/demo-seed.mjs`, and are inserted only by an explicit CLI command. They are not a substitute for registration, session creation, API responses or persistent storage, and the fixture is not imported by the runtime application.
+The brief requests test credentials and sessions including a full one. These exist exclusively in [the opt-in fixture](test/fixtures/demo-seed.mjs), loaded by `db:seed:demo` into an empty **local** database. The command refuses hosted databases and existing accounts. Production starts empty; real members sign up and staff create sessions.
 
-Use a separate database for the reviewer dataset:
-
-```sh
-LOCAL_DB_DIR=.wrangler/reviewer npm run db:migrate
-LOCAL_DB_DIR=.wrangler/reviewer npm run db:seed:demo
-LOCAL_DB_DIR=.wrangler/reviewer npm run dev
-```
-
-`db:seed` is a compatibility alias for the same explicit demo command. Seeding is for a fresh database; it refuses existing data. Never seed a database used by real members. Every fixture account gets its own random password salt. The screenshot gallery uses this optional dataset and does not represent records in a normal empty installation.
-
-## Demo accounts
-
-| Role | Email | Password |
+| Role | Email | Local fixture password |
 | --- | --- | --- |
 | Admin | `admin@still.demo` | `StillDemo2026!` |
 | Member | `aanya@still.demo` | `StillDemo2026!` |
 | Member | `kabir@still.demo` | `StillDemo2026!` |
-| Member in the full session | `member1@still.demo` | `StillDemo2026!` |
+| Member in full session | `member1@still.demo` | `StillDemo2026!` |
 
-These are intentional public demo credentials, not production secrets. The seed creates 23 users, 26 sessions over several days, a full session, partially occupied sessions and one active session with Aanya booked for a check-in demonstration. Dates are relative to the time you seed. Admins are inserted directly into the database by the seed; registration always creates members and rejects a supplied role.
+These are public **local fixture credentials**, never live credentials. The fixture creates 23 users, 26 sessions, one full session, partially occupied sessions and an active check-in example. Dates are relative to seeding. The screenshot gallery shows this separate reviewer dataset.
 
-## Reviewer walkthrough
-
-1. Log in as Aanya. Choose **All upcoming** or tomorrow’s date. Inspect available, booked and full sessions.
-2. Join the full session’s waitlist. **My bookings** shows position 1 and no usable code yet.
-3. In a separate browser/profile, log in as `member1@still.demo`, cancel that same session, and leave Aanya’s screen open.
-4. On the next successful poll (normally within three seconds), Aanya is confirmed, receives a code and a promotion message. Nobody refreshes. The session still has twenty bookings.
-5. Cancel Aanya’s future booking and rebook to verify the active-record constraint allows a new booking after cancellation.
-6. Use Aanya’s *currently running* seeded session code at the admin desk. The first check-in shows her name; reuse fails. Future-session and cancelled codes also fail.
-7. As admin, create a future session, then select it in the register. Duplicate hours are rejected.
-8. Open `/#/admin` as a member: the client redirects. Direct admin API requests still return 403.
+1. Log in as Aanya, choose **All upcoming**, and join the full session’s waitlist.
+2. My bookings shows position 1 and no usable code.
+3. In a separate browser, log in as `member1@still.demo` and cancel the same session.
+4. Aanya’s page shows promotion and a code on the next successful poll, normally within three seconds. Occupancy stays at twenty.
+5. Cancel a future booking and rebook: the new booking has a fresh code.
+6. Use Aanya’s active-session code at the admin desk. Replay, future and cancelled codes fail.
+7. Create a future session as staff; duplicate hours fail. Members cannot access staff endpoints.
 
 ## Verification
 
@@ -91,97 +73,86 @@ npm run typecheck
 npm run build
 ```
 
-The Node suite uses an isolated SQLite database and the actual API handler, schema and triggers. It checks registration/email uniqueness, password hashing, tokens/logout/expiry, authorization, ownership, capacity, simultaneous bookings, FIFO promotion, waitlist departure, cancellation/rebooking, time rules, one-time check-in and safe JSON errors. It deliberately injects one internal error; the log `API error Error` is expected and its response must not expose details.
+The 23 test groups exercise the actual handler, migrations and SQL constraints. They cover authentication/CSRF, role/ownership enforcement, username/email uniqueness, salted passwords, 32 competing bookings, duplicate prevention, FIFO promotion, execution-time boundaries, one-time check-in, lost-response retries and 500 mixed operations. The libSQL test uses **four independent connections to the same database**, checking that a newcomer cannot jump a waiting member during cancellation. An intentionally injected internal error prints `API error Error`; its response must remain safe.
 
-Browser regression tests require a fresh seeded **local** instance running in a separate terminal. They refuse remote URLs because they modify demo data.
+For browser regression tests, create a fresh local reviewer database and run it at port 5174 (`npm run dev -- --port 5174` with the same explicit database environment). Then:
 
 ```sh
-npx playwright install chromium
-npm run test:browser
+TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser
+TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser:audit
+TEST_URL=http://127.0.0.1:5174 npm run test:live
 ```
 
-If Chrome is already installed, avoid another browser download with `CHROME_CHANNEL=chrome npm run test:browser` (POSIX shell). The first smoke test consumes the seeded active check-in code and needs fresh seed data for a repeat. Screenshots default to `.sites-runtime/screenshots`; the review images in `docs/screenshots` are captured from the working app.
+If Chrome is unavailable, run `npx playwright install chromium` and omit `CHROME_CHANNEL`. Browser tests check 360/768/1280 layouts, keyboard focus, signup, booking, waitlist promotion, optimistic rollback, offline recovery, slow polling, lost responses and staff registers. The HTTP audit checks 32 competing requests and check-in races. Tests modify only their isolated fixtures; check-in consumes the active code, so start with fresh data for a complete repeat.
 
-`test/browser.mjs` covers login, inline validation, waitlist joining, live promotion, cancellation/rebooking, member route protection, staff check-in/replay and 360/768/1280 layouts. `test/browser-states.mjs` covers registration, real booking/cancellation, an intercepted 409 to prove optimistic rollback, empty dates, offline recovery and keyboard focus. No browser exceptions were observed in the verified run.
+### Clean-database backend verification
 
-A second booking audit added 5 API test groups (21 total with authentication and resilience checks), a 500-operation invariant test, simultaneous HTTP tests against the real local D1 runtime, and browser tests for slow polling, lost responses and promotion during a join. See [BOOKING_AUDIT.md](BOOKING_AUDIT.md) for results and repeatable commands.
-
-## Clean-database backend verification
-
-`test/browser-real-backend.mjs` verifies the normal app without importing or running any demo seed: chosen admin credentials through the CLI, real member registration, HttpOnly cookie login, an empty schedule, admin-created session, booking, reload persistence, cancellation/rebooking, ownership, role enforcement and revoked logout. It must use an isolated, empty migrated database, with matching server and test paths:
+This flow uses **no demo seed**. Use a fresh file:
 
 ```sh
-LOCAL_DB_DIR=.sites-runtime/real-audit npm run db:migrate
-LOCAL_DB_DIR=.sites-runtime/real-audit npm start -- --port 5175
+TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= LOCAL_DATABASE_PATH=.sites-runtime/real-audit.db npm run db:migrate
+TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= LOCAL_DATABASE_PATH=.sites-runtime/real-audit.db npm run dev -- --port 5175
 # In another terminal:
-TEST_URL=http://127.0.0.1:5175 TEST_DB_DIR=.sites-runtime/real-audit CHROME_CHANNEL=chrome npm run test:browser:real
+TEST_URL=http://127.0.0.1:5175 TEST_DB_DIR=.sites-runtime/real-audit.db CHROME_CHANNEL=chrome npm run test:browser:real
 ```
 
-The test generates its own temporary test credentials and provisions its own test admin directly into that isolated database. It never provisions a real owner's account or modifies the default database. Use a new directory for another empty-database run.
+The test creates its own temporary admin with generated credentials, registers a member through the UI, creates a session through the admin desk, books/cancels/rebooks, reloads to prove persistence, verifies ownership and role restrictions, and verifies logout revocation. It refuses remote URLs. [Booking audit](BOOKING_AUDIT.md) records verification scope and fixes.
 
 ## How correctness works
 
-A booking inserts one row. The database trigger counts confirmed bookings within that same atomic write and aborts the twenty-first. The unique partial index covers both confirmed and waitlisted states, so a member cannot occupy both. API validation improves error messages; it is not the capacity lock.
+Booking inserts one row. A database trigger checks confirmed occupancy inside that atomic write and aborts the twenty-first booking. The partial unique index covers confirmed and waitlisted states together. API validation provides readable messages; database constraints enforce the race-sensitive rules across all server instances.
 
-Cancellation updates a confirmed row to cancelled. In the same database statement, an AFTER trigger promotes the smallest waitlist ID for that session, provided it has not started. A concurrent newcomer cannot take the released seat between cancellation and promotion. Leaving the waitlist does not promote anyone. FIFO uses monotonic database IDs rather than client clocks.
+Cancellation marks a row cancelled. An AFTER trigger promotes the smallest waiting ID for the same future session **within the same statement**. No newcomer can take a released seat between cancellation and promotion. Leaving the queue does not promote anyone. FIFO uses database IDs, independent of client clocks.
 
-Codes contain eight independently random base-32 characters (40 bits), have a unique database index, and are never exposed while waitlisted. Check-in uses one conditional UPDATE: confirmed, unchecked, and within `[session start, session start + one hour)`. A second admin trying the same code gets a conflict. Cancellation and check-in use the database clock at execution to avoid accepting a request that crossed the time boundary in transit.
+Codes use eight random base-32 characters (40 bits), have a unique index and bounded collision retries, and are hidden while waiting. Check-in performs one conditional UPDATE for a confirmed, unchecked booking during `[start, start + one hour)`. Duplicate concurrent check-in attempts cannot both succeed. The database clock decides booking/cancellation/check-in boundaries at execution time.
 
-The client polls every three seconds while visible and immediately on window focus. It drops stale responses, lets slow in-flight reads finish instead of continuously replacing them, and pauses applying polls during mutations. Booking immediately decreases the visible count; a rejected request restores it and keeps a readable error. Successful responses add the booking to My bookings immediately. If a booking or cancellation response is lost, the client reads back the actual member records before announcing the outcome; it never retries a write blindly. Requests time out after fifteen seconds rather than leaving controls disabled forever. The server response always wins. Polling refreshes both sessions and bookings, so waitlist promotions are visible without reloads. A waitlist closes in the UI as soon as its session starts.
+The client polls every three seconds while visible and on focus. It ignores stale responses and deduplicates slow reads. Booking updates availability immediately; rejection rolls it back. After a lost write response, the client reads the server’s actual booking records instead of blindly repeating the write. Requests time out after fifteen seconds. The server remains authoritative.
+
+Production instances all access the same remote primary through `@libsql/client`. They never use a local file, embedded replica or in-memory booking list. The adapter maps parameterized statements to libSQL; write batches are atomic. Vercel refuses to start database operations without a remote URL and token. API responses use `no-store` so one member’s data cannot enter a shared response cache.
 
 ## API
 
-All non-public routes require a valid server-verified session. Browser requests use the HttpOnly cookie; non-browser API clients use `Authorization: Bearer <token>`. Login/register with `X-Still-Client: browser` sets the cookie and omits the token from JSON. Bearer API clients receive the token in JSON. Foreign-origin writes are rejected; cookie writes also require the browser header and matching Origin.
+Authenticated browsers use an HttpOnly, SameSite=Strict cookie, Secure on HTTPS, with seven-day expiry. Login/register with `X-Still-Client: browser` sets the cookie and omits the token from JSON. Non-browser clients receive an opaque token and use `Authorization: Bearer <token>`. Tokens are stored only as SHA-256 digests. Foreign-origin writes are rejected; cookie writes require matching Origin and the application header. Logout revokes the token and clears the cookie.
 
 | Method / route | Access | Purpose |
 | --- | --- | --- |
-| POST `/api/auth/register` | Public | `{name,email,password}`; create member + token |
-| POST `/api/auth/login` | Public | `{email,password}`; return user + token |
+| POST `/api/auth/register` | Public | `{name,username,email,password}`; create member |
+| POST `/api/auth/login` | Public | `{email,password}`; `email` accepts email or username |
 | GET `/api/health` | Public | Database health and server time |
-| GET `/api/auth/me` | Authenticated | Current user |
-| POST `/api/auth/logout` | Authenticated | Revoke token |
-| GET `/api/sessions?date=YYYY-MM-DD` | Authenticated | Sessions and remaining mats, optional IST date |
-| POST `/api/sessions` | Admin | `{date,hour,title,capacity:20}` |
-| POST `/api/sessions/:id/book` | Member | `{}`; reserve mat |
-| POST `/api/sessions/:id/waitlist` | Member | `{}`; join full session’s queue |
-| GET `/api/bookings` | Authenticated | Only the caller’s bookings |
-| DELETE `/api/bookings/:id` | Owner member | Cancel or leave queue before start |
-| GET `/api/sessions/:id/bookings` | Admin | Session register with member details |
-| POST `/api/check-in` | Admin | `{code}`; mark present exactly once |
+| GET `/api/auth/me` | Authenticated | Current identity |
+| POST `/api/auth/logout` | Authenticated | Revoke session |
+| GET `/api/sessions?date=YYYY-MM-DD` | Authenticated | Sessions and availability, optional IST date |
+| POST `/api/sessions` | Admin | `{date,hour,title}`; capacity is always 20 |
+| POST `/api/sessions/:id/book` | Member | `{}`; reserve |
+| POST `/api/sessions/:id/waitlist` | Member | `{}`; queue for a full session |
+| GET `/api/bookings` | Authenticated | Own bookings only |
+| DELETE `/api/bookings/:id` | Owner member | Cancel/leave queue before start |
+| GET `/api/sessions/:id/bookings` | Admin | Register and attendance |
+| POST `/api/check-in` | Admin | `{code}`; check in once |
 
-Errors always use `{ "error": { "code": "...", "message": "...", "fields": {} } }`. Statuses are 400/422 for input, 401 for authentication, 403 for roles, 404 for unknown or unowned records, 409 for conflicts, 429 for throttling, a safe 500 for unexpected errors, and 503 if a code cannot be allocated after bounded collision retries. Successful creation returns 201.
+Errors use `{ "error": { "code": "...", "message": "...", "fields": {} } }`. Invalid inputs return 400/422, missing authentication 401, forbidden roles 403, absent/unowned records 404, conflicts 409, throttling 429, unexpected errors a safe 500, and temporary unavailability 503. Creation returns 201. JSON bodies are bounded to 8 KiB by bytes, including streamed requests.
 
-## Assumptions
+## Assumptions and operational limits
 
-- The gym is in India. All displayed dates and start hours use **Asia/Kolkata (IST)**. Stored timestamps are UTC milliseconds. The database checks alignment to IST hours, which are half-hours in UTC.
-- Sessions last exactly one hour; 20 is fixed. Session names are a small descriptive convenience. Admins create sessions up to one year ahead.
-- Admins run the gym; a separate member account is used to book. Members can book more than one distinct session.
-- A member may join the waitlist only when all mats are occupied. Cancellation and waitlist departure stop at session start. Expired waitlists remain as history and never promote.
-- Rebooking creates a new active row and a fresh code. Cancelled rows are retained for clarity.
-- Check-in is allowed from the exact start, inclusive, until the end, exclusive. There is no grace period.
-- Polling is acceptable under the brief. Live means updates within approximately three seconds when connected; background tabs catch up on focus.
-- The normal session listing covers 90 days and at most 240 entries. An exact date filter can retrieve sessions beyond that window.
+- Gym times use **Asia/Kolkata (IST)**; stored timestamps are UTC milliseconds. Starts align to IST hours.
+- Every session lasts one hour and has twenty mats; these are required business rules, not placeholder records.
+- Staff create sessions up to one year ahead. Members can book distinct sessions; staff use a separate member account to book.
+- Waitlists are full-only; cancellation/departure stop at start. Expired queues never promote.
+- Rebooking creates a fresh code; cancelled bookings remain history. Check-in has no grace period.
+- Live updates normally arrive within three seconds while connected. Background tabs refresh on focus.
+- The default list covers 90 days/240 sessions; exact-date filtering can reach later sessions.
+- Usernames are case-insensitive, 3–24 ASCII letters/numbers/underscores. Names are 2–60 characters; passwords are 10–128 characters. New hashes use PBKDF2-SHA256 with random salts and 600,000 iterations; older 100,000-iteration hashes remain verifiable.
+- This scope does not include email ownership verification, password recovery or email notifications. Do not imply that an email was verified. Account recovery and operational alerting are needed for a broader service rollout.
+- Concurrency checks demonstrate correctness for the tested races, not unlimited capacity or a production throughput certification. Vercel/Turso free-tier quotas apply. Monitor usage and maintain backups before broader adoption.
 
 ## Deployment
 
-The project uses a D1 binding named `DB`; migrations are in `drizzle/`. Hosted data is independent of local data. There is no runtime setup/seeding endpoint. Provision an admin through a trusted database operation with a salted hash, then create sessions through the authenticated admin UI. Never publish reviewer credentials as real member credentials.
-
-The optional hosted deployment failed in its migration runner; there is no verified live link. See [DEPLOYMENT.md](DEPLOYMENT.md) for the exact failure and limits of the diagnosis. The complete app runs locally using the commands above; screenshots and browser tests come from that running application.
-
-## Tradeoffs and remaining limitations
-
-This challenge demo has no password reset, email verification or notification emails. Browser sessions use HttpOnly, SameSite=Strict cookies, with Secure on HTTPS, and expire after seven days; logout revokes them server-side and clears the cookie. Cookie-authenticated writes require the same Origin and a custom application header. The UI never stores a session token in localStorage or sessionStorage. Bearer tokens remain available to non-browser API clients to satisfy the token-login brief. A production app should add account recovery, email verification, monitoring and external IP throttling. Passwords use salted PBKDF2-SHA256 at 100,000 iterations, the [Workers WebCrypto per-call limit](https://github.com/cloudflare/workerd/issues/1346); production credential storage should evaluate a dedicated Argon2id-capable auth service. Cookie flags follow [MDN secure cookie guidance](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies). The API rate limiter is database-backed, not an in-memory counter. Public demo credentials should never be reused for real members.
-
-The full app is built for the recruitment brief, not a claim of production certification. Tests exercise the real SQL constraints; a larger operational load test, dedicated screen-reader audit and disaster recovery exercise remain outside this submission.
+See [DEPLOYMENT.md](DEPLOYMENT.md). Vercel hosts Next.js Functions and Turso hosts the persistent database, both configured in Mumbai (`bom1`). Credentials are server-only integration variables; migrations run explicitly before deployment. No runtime schema creation or seeding occurs. An admin is provisioned through a trusted CLI/database operation; public signup cannot grant staff access.
 
 ## Design and assistance
 
-Visual direction: restrained typography, soft neutral/sage surfaces and generous spacing, inspired by the supplied [Lucid reference](https://dribbble.com/shots/27524013-Lucid-AI-recovery-ecosystems-Website). The visual artwork is CSS; no third-party images or copied design assets are bundled. The focus is the booking workflow, not decoration.
+Restrained typography, neutral/sage surfaces and generous spacing follow the supplied [Lucid reference](https://dribbble.com/shots/27524013-Lucid-AI-recovery-ecosystems-Website). Artwork is CSS. Buttons have a gentle press/release bounce; curved dropdowns have a small hover zoom. Reduced-motion preferences disable these effects.
 
-AI assistance was used with the candidate’s stated permission from the society. Commit history records actual implementation stages. The candidate should review and understand the code and be prepared to modify it in the required live walkthrough; no claim of unaided authorship is made.
+AI assistance was used with the candidate’s stated permission from the society. The candidate should understand the code and be prepared to modify it during the walkthrough; no claim of unaided authorship is made. Git commits use the repository owner’s verified GitHub identity.
 
-## Interaction and resilience follow-up
-
-Buttons have a subtle spring on press/release, with reduced-motion support and no layout reflow. Availability displays use each session’s capacity from the API. Fixed twenty-mat capacity and one-hour duration remain enforced business rules.
-
-The API reads JSON bodies with an 8 KiB streaming byte limit, rejects invalid UTF-8/media types and returns consistent errors. Random booking-code collisions retry the aborted insert up to three times; capacity and member-uniqueness conflicts are never retried. Invalid password-hash records fail authentication safely. [Resilience regressions](test/backend-resilience.test.mjs) exercise these cases against the real handler and schema.
+Task 1 is submitted separately as [iamtanish2618/canteen-chaos](https://github.com/iamtanish2618/canteen-chaos), with its own debugging log and regression tests.

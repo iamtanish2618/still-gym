@@ -20,6 +20,10 @@ try {
     .click();
   await page.getByLabel("Your name").fill("Browser Test");
   await page
+    .getByLabel("Username", { exact: true })
+    .fill(`browser_${Date.now()}`);
+  await page.getByLabel("Confirm password").fill("BrowserTest2026!");
+  await page
     .getByLabel("Email address")
     .fill(`browser-${Date.now()}@still.demo`);
   await page.getByLabel("Password", { exact: true }).fill("BrowserTest2026!");
@@ -66,7 +70,7 @@ try {
   );
   release();
   await page
-    .getByRole("alert")
+    .locator(".alert[role=alert]")
     .filter({ hasText: "The final mat was just taken." })
     .waitFor();
   await row.getByRole("button", { name: "Book a mat" }).waitFor();
@@ -101,19 +105,25 @@ try {
   });
   await page.context().setOffline(true);
   await page
-    .getByRole("alert")
+    .locator(".alert[role=alert]")
     .filter({ hasText: "Cannot connect" })
     .waitFor({ timeout: 10000 });
   await page.context().setOffline(false);
-  await page.getByRole("button", { name: "Try again" }).click();
-  await page.getByRole("alert").waitFor({ state: "hidden" });
+  const retry = page.getByRole("button", { name: "Try again" });
+  if (await retry.isVisible()) {
+    await retry.click({ timeout: 2000 }).catch(async (error) => {
+      // A successful reconnect poll may remove the retry control mid-click.
+      if (await retry.isVisible()) throw error;
+    });
+  }
+  await page.locator(".alert[role=alert]").waitFor({ state: "hidden" });
   await page.setViewportSize({ width: 360, height: 800 });
   await page.screenshot({
     path: `${screenshots}/mobile-preview.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Log out", exact: true }).click();
-  await page.getByLabel("Email address").waitFor();
+  await page.getByLabel("Email or username").waitFor();
   await page.screenshot({
     path: `${screenshots}/login-mobile.png`,
     fullPage: true,

@@ -1,4 +1,4 @@
-// Run against an empty, migrated, isolated local D1 database. No demo seed is used.
+// Run against an empty, migrated, isolated local SQLite database. No demo seed is used.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -10,7 +10,7 @@ if (
   !dbDir?.startsWith(".sites-runtime/")
 )
   throw Error(
-    "Supply TEST_DB_DIR=.sites-runtime/<isolated migrated database> and a local TEST_URL.",
+    "Supply TEST_DB_DIR=.sites-runtime/<isolated migrated file.db> and a local TEST_URL.",
   );
 const run = Date.now(),
   password = randomBytes(24).toString("base64url"),
@@ -18,7 +18,7 @@ const run = Date.now(),
 const provision = spawnSync(process.execPath, ["scripts/create-admin.mjs"], {
   input: JSON.stringify({ name: "Owner Verification", email, password }),
   encoding: "utf8",
-  env: { ...process.env, LOCAL_DB_DIR: dbDir },
+  env: { ...process.env, LOCAL_DATABASE_PATH: dbDir, TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "" },
 });
 assert.equal(provision.status, 0, provision.stderr);
 assert.ok(!provision.stdout.includes(password));
@@ -38,7 +38,7 @@ for (const p of [owner, member])
   p.on("pageerror", (e) => errors.push(e.message));
 try {
   await owner.goto(base);
-  await owner.getByLabel("Email address").fill(email);
+  await owner.getByLabel("Email or username").fill(email);
   await owner.getByLabel("Password", { exact: true }).fill(password);
   await owner.getByRole("button", { name: "Enter your space" }).click();
   await owner.waitForURL(/#\/admin$/);
@@ -54,6 +54,8 @@ try {
     .getByRole("button", { name: "Create account", exact: true })
     .click();
   await member.getByLabel("Your name").fill("Registered Member");
+  await member.getByLabel("Username", { exact: true }).fill(`registered_${run}`);
+  await member.getByLabel("Confirm password").fill(password);
   await member.getByLabel("Email address").fill(`registered-${run}@test.local`);
   await member.getByLabel("Password", { exact: true }).fill(password);
   await member.getByRole("button", { name: "Create your account" }).click();
@@ -115,7 +117,7 @@ try {
   await member.getByText(firstCode, { exact: true }).waitFor();
   const second = await otherContext.request.post(base + "/api/auth/register", {
     headers: { Origin: base, "X-Still-Client": "browser" },
-    data: { name: "Other Member", email: `other-${run}@test.local`, password },
+    data: { username: `other_${run}`, name: "Other Member", email: `other-${run}@test.local`, password },
   });
   assert.equal(second.status(), 201);
   assert.equal(
@@ -144,10 +146,10 @@ try {
   const meBefore = await member.request.get(base + "/api/auth/me");
   assert.equal(meBefore.status(), 200);
   await member.getByRole("button", { name: "Log out", exact: true }).click();
-  await member.getByLabel("Email address").waitFor();
+  await member.getByLabel("Email or username").waitFor();
   assert.equal((await member.request.get(base + "/api/auth/me")).status(), 401);
   await member.reload();
-  await member.getByLabel("Email address").waitFor();
+  await member.getByLabel("Email or username").waitFor();
   assert.deepEqual(errors, []);
   console.log(
     "PASS: EMPTY database, chosen admin credentials through CLI, real member registration, HttpOnly login, admin UI session creation, live booking, reload persistence, cancellation/rebooking, member privacy, role enforcement and logout. No demo seed or browser exceptions.",

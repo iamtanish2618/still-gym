@@ -35,36 +35,7 @@ The added browser audit covers slow reads, a real committed booking with its res
 
 ## Repeat the checks
 
-```sh
-npm test
-npm run typecheck
-npm run build
-```
-
-`npm test` includes 21 test groups, including the five added invariant groups. Tests create isolated SQLite databases. The deliberately injected internal error prints `API error Error` and must still produce a safe JSON response.
-
-For HTTP and browser tests, use a separate **fresh seeded local D1 database**. These tests modify demo data and refuse non-local URLs. Build first, then:
-
-```sh
-LOCAL_DB_DIR=.sites-runtime/audit-db npm run db:migrate
-LOCAL_DB_DIR=.sites-runtime/audit-db npm run db:seed
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .sites-runtime/audit-db --ip 127.0.0.1 --port 5174 --inspector-port 0
-```
-
-In another terminal:
-
-```sh
-TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser
-TEST_URL=http://127.0.0.1:5174 CHROME_CHANNEL=chrome npm run test:browser:audit
-```
-
-Use `npx playwright install chromium` and omit `CHROME_CHANNEL` if Chrome is unavailable. The first suite consumes the active seeded check-in code. For the real HTTP check-in race, use a second fresh database directory/server instead of the browser test's database:
-
-```sh
-TEST_URL=http://127.0.0.1:5174 npm run test:live
-```
-
-Do not remove a database someone is using. Choose a new local directory for each fresh audit. Local tests and hosted data are separate. The existing optional hosting migration failure is documented in DEPLOYMENT.md and was not changed by this audit.
+The current runtime is Next.js + shared Turso/libSQL on Vercel. See [README verification](README.md#verification) for current commands. The original 15 October audit below refers to the earlier local D1 runtime; its SQL invariants have been retained. The 16 October migration adds a four-connection libSQL concurrency test and username authentication tests (23 groups total).
 
 ## Authentication and real-use follow-up — 16 October 2026
 

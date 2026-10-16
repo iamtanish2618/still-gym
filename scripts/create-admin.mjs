@@ -1,6 +1,5 @@
 import { passwordHash } from "../server/auth.mjs";
-import { spawnSync } from "node:child_process";
-import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { getDatabase } from "../server/database.mjs";
 import { createInterface } from "node:readline/promises";
 
 export async function adminStatement({ name, email, password }) {
@@ -72,38 +71,14 @@ async function main() {
     input = JSON.parse(text);
   }
   const sql = await adminStatement(input);
-  await mkdir(".sites-runtime", { recursive: true });
-  const file = `.sites-runtime/admin-${crypto.randomUUID()}.sql`;
+  const db = await getDatabase();
   try {
-    await writeFile(file, sql, { mode: 0o600 });
-    const r = spawnSync(
-      process.execPath,
-      [
-        "--import",
-        "./scripts/sites-env.mjs",
-        "./node_modules/wrangler/bin/wrangler.js",
-        "d1",
-        "execute",
-        "DB",
-        "--local",
-        "--config",
-        "dist/server/wrangler.json",
-        "--persist-to",
-        process.env.LOCAL_DB_DIR || ".wrangler/state",
-        "--file",
-        file,
-      ],
-      { encoding: "utf8" },
-    );
-    if (r.status !== 0)
-      throw Error(
-        "Admin creation failed. Confirm migrations ran and that the email is unused. Existing accounts were not changed.",
-      );
+    await db.prepare(sql).run();
     console.log(
-      "Admin created in your local database. Sign in with the email and password you chose.",
+      "Admin created. Sign in with the email and password you chose.",
     );
   } finally {
-    await unlink(file).catch(() => {});
+    db.client.close();
   }
 }
 if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1])

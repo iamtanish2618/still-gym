@@ -1,8 +1,8 @@
-// Integration audit against the actual HTTP server and D1 binding, never a public deployment.
+// Integration audit against the actual HTTP server and libSQL adapter, never a public deployment.
 import assert from "node:assert/strict";
 const base = process.env.TEST_URL || "http://127.0.0.1:5174";
 if (!/^http:\/\/(127\.0\.0\.1|localhost):/.test(base))
-  throw Error("Use an isolated, freshly seeded local D1 instance.");
+  throw Error("Use an isolated, freshly seeded local libSQL instance.");
 const run = Date.now().toString(36);
 async function api(path, token, method = "GET", body) {
   const r = await fetch(base + "/api" + path, {
@@ -25,7 +25,8 @@ assert.ok(admin, "Fresh local seed required.");
 const users = await Promise.all(
   Array.from({ length: 32 }, async (_, i) => {
     const r = await api("/auth/register", null, "POST", {
-      name: "D1 Racer " + i,
+      name: "HTTP Racer " + i,
+      username: `race_${run}_${i}`,
       email: `d1-${run}-${i}@test.local`,
       password: "LocalAudit2026!",
     });
@@ -41,7 +42,7 @@ for (let hour = 0; hour < 24; hour++) {
   const r = await api("/sessions", admin, "POST", {
     date,
     hour,
-    title: "D1 concurrency audit",
+    title: "HTTP concurrency audit",
   });
   if (r.status === 201) {
     session = r.data.session;
@@ -68,7 +69,7 @@ assert.equal(rows.filter((b) => b.status === "confirmed").length, 20);
 assert.equal(new Set(rows.map((b) => b.user_id)).size, 20);
 assert.equal(new Set(rows.map((b) => b.code)).size, 20);
 console.log(
-  "PASS: 32 simultaneous HTTP requests to real D1 produce exactly 20 confirmations and 12 conflicts.",
+  "PASS: 32 simultaneous HTTP requests to real SQL storage produce exactly 20 confirmations and 12 conflicts.",
 );
 const queued = [];
 for (const u of losers.slice(0, 4)) {
@@ -109,7 +110,7 @@ assert.equal(rows.find((b) => b.id === queued[3].id).status, "confirmed");
 assert.equal(rows.filter((b) => b.status === "confirmed").length, 20);
 assert.equal((await cancel(victim3, losers[5])).status, 404);
 console.log(
-  "PASS: duplicate cancellation, concurrent queue departure, FIFO promotion, no queue jumping, ownership and hidden waitlist codes on real D1.",
+  "PASS: duplicate cancellation, concurrent queue departure, FIFO promotion, no queue jumping, ownership and hidden waitlist codes on real SQL storage.",
 );
 const promoted = rows.find((b) => b.id === queued[0].id);
 assert.equal(

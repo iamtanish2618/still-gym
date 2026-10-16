@@ -57,6 +57,7 @@ const racers = await Promise.all(
 test("registration normalizes unique email, hashes passwords, never grants admin", async () => {
   const good = {
     name: "Test member",
+    username: "test_member",
     email: " TEST@example.org ",
     password: "TestPassword123",
   };

@@ -21,6 +21,7 @@ export function bookingCode() {
 export async function passwordHash(
   password,
   salt = hex(crypto.getRandomValues(new Uint8Array(16))),
+  iterations = 600000,
 ) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -30,19 +31,19 @@ export async function passwordHash(
     ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: unhex(salt), iterations: 100000 },
+    { name: "PBKDF2", hash: "SHA-256", salt: unhex(salt), iterations },
     key,
     256,
   );
-  return `pbkdf2-sha256$100000$${salt}$${hex(new Uint8Array(bits))}`;
+  return `pbkdf2-sha256$${iterations}$${salt}$${hex(new Uint8Array(bits))}`;
 }
 export async function verifyPassword(password, stored) {
   if (typeof password !== "string" || typeof stored !== "string") return false;
   const parts = stored.match(
-    /^pbkdf2-sha256\$100000\$([a-f0-9]{32})\$([a-f0-9]{64})$/,
+    /^pbkdf2-sha256\$(100000|600000)\$([a-f0-9]{32})\$([a-f0-9]{64})$/,
   );
   if (!parts) return false;
-  const actual = await passwordHash(password, parts[1]);
+  const actual = await passwordHash(password, parts[2], Number(parts[1]));
   let difference = actual.length ^ stored.length;
   for (let i = 0; i < actual.length; i++)
     difference |= actual.charCodeAt(i) ^ (stored.charCodeAt(i) || 0);

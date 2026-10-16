@@ -90,6 +90,7 @@ const publicUser = (u) => ({
   id: u.id,
   name: u.name,
   email: u.email,
+  username: u.username ?? null,
   role: u.role,
 });
 const bookingSelect = `SELECT b.id,b.session_id,b.status,b.created_at,b.checked_in_at,s.start,s.title,
@@ -115,6 +116,7 @@ export async function handleApi(request, db) {
         "You already have a place in this session.",
       ],
       ["users.email", "An account with this email already exists."],
+      ["users.username", "That username is already taken. Choose another."],
       ["sessions.start", "A session already starts at this time."],
     ];
     for (const [needle, description] of known)
@@ -164,6 +166,7 @@ async function dispatch(request, db) {
   }
   async function sessionFor(user, status = 200) {
     const token = randomToken();
+    await query("DELETE FROM tokens WHERE expires_at<=?", Date.now()).run();
     await query(
       "INSERT INTO tokens(hash,user_id,expires_at) VALUES(?,?,?)",
       await hashToken(token),
@@ -186,8 +189,20 @@ async function dispatch(request, db) {
         typeof data.email === "string" ? data.email.trim().toLowerCase() : "",
       password = data.password,
       fields = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
+    const registering = path.endsWith("register");
+    const username =
+      typeof data.username === "string"
+        ? data.username.trim().toLowerCase()
+        : "";
+    if (
+      registering &&
+      (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
+    )
       fields.email = "Enter a valid email address.";
+    if (!registering && (!email || email.length > 254))
+      fields.email = "Enter your email or username.";
+    if (registering && !/^[a-z0-9_]{3,24}$/.test(username))
+      fields.username = "Use 3–24 letters, numbers or underscores.";
     if (
       typeof password !== "string" ||
       password.length < 10 ||
@@ -196,8 +211,10 @@ async function dispatch(request, db) {
       fields.password = "Use between 10 and 128 characters.";
     if (Object.keys(fields).length) invalid(fields);
     await throttle(`auth:${email}`, 10);
-    if (request.headers.get("cf-connecting-ip"))
-      await throttle(`ip:${request.headers.get("cf-connecting-ip")}`, 50);
+    const ip =
+      request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("cf-connecting-ip");
+    if (ip) await throttle(`ip:${ip}`, 200);
     if (path.endsWith("register")) {
       if (data.role !== undefined)
         fail(
@@ -213,22 +230,28 @@ async function dispatch(request, db) {
         invalid({ name: "Use between 2 and 60 characters." });
       const hash = await passwordHash(password);
       const user = await query(
-        "INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,'member') RETURNING id,name,email,role",
+        "INSERT INTO users(name,email,username,password_hash,role) VALUES(?,?,?,?,'member') RETURNING id,name,email,username,role",
         data.name.trim(),
         email,
+        username,
         hash,
       ).first();
       return sessionFor(user, 201);
     }
     const user = await query(
-      "SELECT * FROM users WHERE email=?",
+      "SELECT * FROM users WHERE email=? OR username=?",
+      email,
       email,
     ).first();
     const valid = user
       ? await verifyPassword(password, user.password_hash)
       : (await passwordHash(password), false);
     if (!valid)
-      fail(401, "INVALID_CREDENTIALS", "Email or password is incorrect.");
+      fail(
+        401,
+        "INVALID_CREDENTIALS",
+        "Email, username or password is incorrect.",
+      );
     return sessionFor(user);
   }
   const bearer = request.headers

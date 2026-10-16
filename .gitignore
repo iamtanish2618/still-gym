@@ -61,3 +61,8 @@ work-tmp/
 
 !.env.example
 *.tsbuildinfo
+
+# Local development database
+/.local/
+*.db-wal
+*.db-shm

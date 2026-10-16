@@ -288,6 +288,27 @@ a.button:active {
   width: 100%;
   min-height: 47px;
 }
+.field select {
+  border-radius: 13px;
+  cursor: pointer;
+  transform-origin: center;
+  transition:
+    transform 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .field select:hover {
+    transform: scale(1.015);
+    background: #ffffff90;
+    box-shadow: 0 4px 14px #2538290b;
+  }
+}
+.password-toggle {
+  align-self: flex-start;
+  margin: -6px 0 18px;
+  font-size: 12px;
+}
 .field input::placeholder {
   color: #8a8b84;
 }
@@ -1289,7 +1310,8 @@ footer > span:last-child {
 }
 @media (prefers-reduced-motion: reduce) {
   button:not(:disabled):active,
-  a.button:active {
+  a.button:active,
+  .field select:hover {
     transform: none;
   }
   html {

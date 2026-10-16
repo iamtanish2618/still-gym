@@ -10,6 +10,7 @@ type User = {
   id: number;
   name: string;
   email: string;
+  username: string | null;
   role: "member" | "admin";
 };
 type Session = {
@@ -160,7 +161,8 @@ export default function Gym() {
   const [serverOffset, setServerOffset] = useState(0),
     [clock, setClock] = useState(Date.now()),
     [confirm, setConfirm] = useState<number | null>(null),
-    [authMode, setAuthMode] = useState("login");
+    [authMode, setAuthMode] = useState("login"),
+    [showPassword, setShowPassword] = useState(false);
   const requestSequence = useRef(0),
     loadingSequence = useRef<number | null>(null),
     mutating = useRef(false),
@@ -217,6 +219,9 @@ export default function Gym() {
         requestSequence.current++;
         rosterSequence.current++;
         setUser(null);
+        setAuthMode("login");
+        setShowPassword(false);
+        setFields({});
         setSessions([]);
         setBookings([]);
         setRoster([]);
@@ -362,13 +367,25 @@ export default function Gym() {
       email = String(form.get("email") || "").trim(),
       password = String(form.get("password") || ""),
       name = String(form.get("name") || "").trim(),
+      username = String(form.get("username") || "")
+        .trim()
+        .toLowerCase(),
       f: Fields = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    if (authMode === "register" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       f.email = "Enter a valid email address.";
     if (password.length < 10 || password.length > 128)
       f.password = "Use between 10 and 128 characters.";
     if (authMode === "register" && (name.length < 2 || name.length > 60))
       f.name = "Use between 2 and 60 characters.";
+    if (authMode === "login" && !email)
+      f.email = "Enter your email or username.";
+    if (authMode === "register" && !/^[a-z0-9_]{3,24}$/.test(username))
+      f.username = "Use 3–24 letters, numbers or underscores.";
+    if (
+      authMode === "register" &&
+      password !== String(form.get("confirmPassword") || "")
+    )
+      f.confirmPassword = "Your passwords do not match.";
     setFields(f);
     setError("");
     if (Object.keys(f).length) return;
@@ -376,7 +393,7 @@ export default function Gym() {
     try {
       const d = await api(`/auth/${authMode}`, {
         method: "POST",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, username, password }),
       });
       authGeneration.current++;
       setUser(d.user);
@@ -396,6 +413,9 @@ export default function Gym() {
       requestSequence.current++;
       rosterSequence.current++;
       setUser(null);
+      setAuthMode("login");
+      setShowPassword(false);
+      setFields({});
       setSessions([]);
       setBookings([]);
       setRoster([]);
@@ -686,6 +706,7 @@ export default function Gym() {
                     aria-pressed={authMode === "login"}
                     onClick={() => {
                       setAuthMode("login");
+                      setShowPassword(false);
                       setError("");
                       setFields({});
                     }}
@@ -696,6 +717,7 @@ export default function Gym() {
                     aria-pressed={authMode === "register"}
                     onClick={() => {
                       setAuthMode("register");
+                      setShowPassword(false);
                       setError("");
                       setFields({});
                     }}
@@ -718,24 +740,62 @@ export default function Gym() {
                       error={fields.name}
                     />
                   )}
+                  {authMode === "register" && (
+                    <Field
+                      label="Username"
+                      name="username"
+                      autoComplete="username"
+                      placeholder="Choose a unique username"
+                      maxLength={24}
+                      error={fields.username}
+                    />
+                  )}
                   <Field
-                    label="Email address"
+                    label={
+                      authMode === "register"
+                        ? "Email address"
+                        : "Email or username"
+                    }
                     name="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
+                    type={authMode === "register" ? "email" : "text"}
+                    autoComplete={
+                      authMode === "register" ? "email" : "username"
+                    }
+                    placeholder={
+                      authMode === "register"
+                        ? "you@example.com"
+                        : "Your email or username"
+                    }
                     error={fields.email}
                   />
                   <Field
                     label="Password"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     autoComplete={
                       authMode === "login" ? "current-password" : "new-password"
                     }
                     placeholder="At least 10 characters"
                     error={fields.password}
                   />
+                  {authMode === "register" && (
+                    <Field
+                      label="Confirm password"
+                      name="confirmPassword"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      placeholder="Enter your password again"
+                      error={fields.confirmPassword}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    className="text-btn password-toggle"
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((value) => !value)}
+                  >
+                    {showPassword ? "Hide password" : "Show password"}
+                  </button>
                   <button className="button primary full" disabled={!!pending}>
                     {pending === "auth"
                       ? "Opening your space…"
