@@ -44,7 +44,14 @@ try {
   await page.getByText("Enter your email or username.").waitFor();
   await login("aanya@still.demo");
   await page.locator(".session-row").first().waitFor();
-  await page.getByRole("button", { name: "All upcoming", exact: true }).click();
+  if (
+    await page
+      .getByRole("button", { name: "All upcoming", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "All upcoming", exact: true })
+      .click();
   await page.getByRole("button", { name: "Join waitlist" }).first().waitFor();
   await shot("sessions-desktop");
   // Full-session waitlist and live promotion after a second member cancels.

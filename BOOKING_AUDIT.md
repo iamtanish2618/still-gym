@@ -58,3 +58,9 @@ The Next.js migration retained the original triggers and constraints. All 23 bac
 The empty-database browser flow passed without fixtures. Browser regression checks passed for signup, optimistic rollback, offline recovery, slow polling, lost responses, promotion during join, mobile layouts and staff registers. Migration-specific issues corrected: Next’s internal localhost URL needed canonicalization against the served Host for CSRF; logout needed to return newly registered members to the login form. Tests now distinguish Next’s route announcer from application alerts and tolerate automatic reconnect removing a retry button.
 
 The public deployment at https://still-gym.vercel.app passed 32 simultaneous booking requests (20 confirmations, 12 conflicts), FIFO/no-queue-jumping, privacy/roles and one-time concurrent check-in. A live browser verified fresh signup, password confirmation, secure cookies, real booking/reload/cancellation, logout and username login. Generated audit records were removed. See [deployment evidence](DEPLOYMENT.md#verification-status).
+
+## Sessions appeared missing after reload — 16 October 2026
+
+All six reported sessions remained in Turso. They were scheduled for 17 October, while reloading reset the in-memory date filter to 16 October. The apparent loss was a view-state bug, not deleted records.
+
+New visits now show all upcoming sessions. Applied date filters and selected staff registers are encoded in the URL and restored after reload; changing filters clears the old register selection. Empty-date messages identify the date. The new `test/browser-schedule-persistence.mjs` verifies creation/reload, selected register, switching views, empty-day persistence, all-upcoming persistence and safe invalid-filter fallback. The admin-switch browser regression also passed after this change. No database migration or production session edits are required.

@@ -69,9 +69,14 @@ try {
   {
     const { page, context, goto } = await open(member.token);
     await goto();
-    await page
-      .getByRole("button", { name: "All upcoming", exact: true })
-      .click();
+    if (
+      await page
+        .getByRole("button", { name: "All upcoming", exact: true })
+        .isVisible()
+    )
+      await page
+        .getByRole("button", { name: "All upcoming", exact: true })
+        .click();
     const target = (await api("/sessions", member.token)).data.sessions.find(
       (s) => s.start > Date.now() && s.remaining > 0,
     );
@@ -125,9 +130,14 @@ try {
   {
     const { page, context, goto } = await open(member.token);
     await goto();
-    await page
-      .getByRole("button", { name: "All upcoming", exact: true })
-      .click();
+    if (
+      await page
+        .getByRole("button", { name: "All upcoming", exact: true })
+        .isVisible()
+    )
+      await page
+        .getByRole("button", { name: "All upcoming", exact: true })
+        .click();
     const full = (await api("/sessions", member.token)).data.sessions.find(
       (s) => s.start > Date.now() && s.remaining === 0 && s.waiting === 0,
     );

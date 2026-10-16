@@ -27,7 +27,14 @@ try {
   await page.waitForURL(/#\/sessions$/);
   await page.locator('.mode-switch[aria-checked="true"]').waitFor();
   assert.equal(await toggle.getAttribute("aria-checked"), "true");
-  await page.getByRole("button", { name: "All upcoming", exact: true }).click();
+  if (
+    await page
+      .getByRole("button", { name: "All upcoming", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "All upcoming", exact: true })
+      .click();
   const row = page
     .locator(".session-row")
     .filter({

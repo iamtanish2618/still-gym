@@ -147,7 +147,8 @@ export default function Gym() {
   const [sessions, setSessions] = useState<Session[]>([]),
     [bookings, setBookings] = useState<Booking[]>([]),
     [date, setDate] = useState(dateKey()),
-    [allDates, setAllDates] = useState(false);
+    [allDates, setAllDates] = useState(true),
+    [filterReady, setFilterReady] = useState(false);
   const [loading, setLoading] = useState(false),
     [error, setError] = useState(""),
     [loadError, setLoadError] = useState(""),
@@ -170,6 +171,38 @@ export default function Gym() {
     rosterSequence = useRef(0),
     rosterLoadingSequence = useRef<number | null>(null),
     authGeneration = useRef(0);
+  // Keep schedule navigation in the URL so reloads and shared links show the
+  // same date/register. A new visit defaults to all upcoming sessions.
+  useEffect(() => {
+    const restore = () => {
+      const query = new URLSearchParams(location.search);
+      const chosen = query.get("date");
+      const parsed = chosen ? Date.parse(`${chosen}T00:00:00+05:30`) : NaN;
+      const valid =
+        !!chosen &&
+        /^\d{4}-\d{2}-\d{2}$/.test(chosen) &&
+        Number.isFinite(parsed) &&
+        dateKey(parsed) === chosen;
+      setDate(valid ? chosen : dateKey());
+      setAllDates(!valid);
+      const session = query.get("session") || "";
+      setStaffSession(/^[1-9]\d{0,9}$/.test(session) ? session : "");
+      setFilterReady(true);
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
+  useEffect(() => {
+    if (!filterReady) return;
+    const url = new URL(location.href);
+    if (allDates) url.searchParams.delete("date");
+    else url.searchParams.set("date", date);
+    if (staffSession) url.searchParams.set("session", staffSession);
+    else url.searchParams.delete("session");
+    if (url.href !== location.href)
+      history.replaceState(history.state, "", url);
+  }, [filterReady, date, allDates, staffSession]);
   const now = clock + serverOffset;
   const api = useCallback(async (path: string, options: RequestInit = {}) => {
     const generation = authGeneration.current;
@@ -272,7 +305,7 @@ export default function Gym() {
   }, []);
   const load = useCallback(
     async (quiet = false) => {
-      if (!user || mutating.current) return;
+      if (!user || !filterReady || mutating.current) return;
       // A quiet poll must not invalidate a slower request for the same view.
       // Explicit navigation/filter changes can still replace an obsolete request.
       if (quiet && loadingSequence.current === requestSequence.current) return;
@@ -309,7 +342,7 @@ export default function Gym() {
         if (seq === requestSequence.current) setLoading(false);
       }
     },
-    [api, user, date, allDates],
+    [api, user, date, allDates, filterReady],
   );
   useEffect(() => {
     if (!user || route === "login") return;
@@ -914,7 +947,7 @@ export default function Gym() {
                 <section className="schedule">
                   <div className="section-title">
                     <h2>
-                      The schedule{" "}
+                      {allDates ? "Upcoming sessions" : "The schedule"}{" "}
                       <span className="muted">
                         /{String(sessions.length).padStart(2, "0")}
                       </span>
@@ -929,12 +962,19 @@ export default function Gym() {
                         onChange={(e) => {
                           setDate(e.target.value || dateKey());
                           setAllDates(false);
+                          setStaffSession("");
+                          setRoster([]);
                         }}
                       />
                       <button
                         className={`text-btn ${allDates ? "selected" : ""}`}
                         disabled={!!pending}
-                        onClick={() => setAllDates(!allDates)}
+                        aria-pressed={allDates}
+                        onClick={() => {
+                          setAllDates(!allDates);
+                          setStaffSession("");
+                          setRoster([]);
+                        }}
                       >
                         {allDates ? "Show selected day" : "All upcoming"}
                       </button>
@@ -952,8 +992,9 @@ export default function Gym() {
                       </div>
                     ) : sessions.length === 0 ? (
                       <Empty title="A little breathing room.">
-                        No sessions on this date. Choose another day or view all
-                        upcoming.
+                        {allDates
+                          ? "No upcoming sessions have been created yet."
+                          : `No sessions for ${day(Date.parse(`${date}T00:00:00+05:30`))}. Choose another date or select All upcoming.`}
                       </Empty>
                     ) : (
                       sessions.map((s) => (
@@ -1274,7 +1315,13 @@ export default function Gym() {
                         onChange={(e) => setStaffSession(e.target.value)}
                       >
                         <option value="">
-                          {loading ? "Loading sessions…" : "Select session"}
+                          {loading
+                            ? "Loading sessions…"
+                            : sessions.length
+                              ? "Select session"
+                              : allDates
+                                ? "No upcoming sessions"
+                                : "No sessions on selected date"}
                         </option>
                         {sessions.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -1299,7 +1346,12 @@ export default function Gym() {
                     />
                     <button
                       className="text-btn"
-                      onClick={() => setAllDates(!allDates)}
+                      aria-pressed={allDates}
+                      onClick={() => {
+                        setAllDates(!allDates);
+                        setStaffSession("");
+                        setRoster([]);
+                      }}
                     >
                       {allDates ? "Selected day" : "All upcoming"}
                     </button>

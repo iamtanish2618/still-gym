@@ -161,3 +161,5 @@ AI assistance was used with the candidate’s stated permission from the society
 Task 1 is submitted separately as [iamtanish2618/canteen-chaos](https://github.com/iamtanish2618/canteen-chaos), with its own debugging log and regression tests.
 
 Admins land on the studio desk. Turn on **Member mode** in the navigation to browse sessions and manage your own bookings; turn it off to return to staff tools. The view follows the route and survives reloads. Ordinary members never see this control. The API authorizes staff operations from the database role on every request, never from the switch or any client-supplied role.
+
+The schedule defaults to **all upcoming sessions**. Selecting a date or staff register stores that view in the URL, so refreshes and shared links preserve it. Changing the date clears the old register selection. Empty-day messages identify the selected date instead of suggesting that saved sessions disappeared. Run `npm run test:browser:schedule` against an isolated reviewer instance to verify reload behavior.
