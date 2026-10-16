@@ -57,3 +57,13 @@ Code commit `f6cf3e1`; deployment `dpl_6n467axzStRkX2geGHkkA3mCHfZz`, promoted t
 New visits show upcoming sessions, and date/register selections persist in the URL. Local browser regressions passed for creation/reload, register selection, member mode, empty-day and all-upcoming filters, invalid-filter fallback and existing admin/member permission checks.
 
 A read-only live browser check verified all six existing sessions, preserved date/register selections after reload, and verified the member view and all-upcoming view after reload. Existing session records were compared before and after and were unchanged. No production sessions or bookings were created, edited or deleted during that verification. The temporary verification login session was revoked afterward.
+
+## Persistence, concurrency and motion review — 16 October 2026
+
+Code commit `913766a`; deployment `dpl_E8pFwoDqv7Y9RiLZYuex7u2V32R6`, promoted to https://still-gym.vercel.app. [CI passed all 25 backend groups, TypeScript and build](https://github.com/iamtanish2618/still-gym/actions/runs/38920640480).
+
+The live audit passed confirmed-booking persistence after reload, logout/login and a fresh browser context, including unchanged booking ID/code/session. Waitlist booking IDs and positions survived logout/login, while the old login token was revoked. Staff-created sessions survived staff logout/login. Animation feedback and reduced-motion behavior were verified through the functioning browser flow.
+
+The deployed 32-request race returned 20 confirmations and 12 conflicts (1,281 ms batch wall time in this run). A separate exactly-two-person race for the last remaining mat returned one 201 and one 409, with 20 total confirmed bookings. FIFO/no-queue-jumping, account ownership, member/staff restrictions and one-time concurrent check-in also passed. The independent-client regression additionally checks two concurrent clicks by one account create only one booking.
+
+All generated audit records were removed. A digest comparison against a pre-release snapshot verified **all 6 existing sessions and all 4 existing bookings remained unchanged** after the release and live audit. No production data was migrated, reset or reseeded. These checks demonstrate the tested lifecycle/race behavior; they are not a promise against every possible infrastructure failure.
