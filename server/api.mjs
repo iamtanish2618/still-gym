@@ -33,11 +33,41 @@ const id = (value) => {
   return Number(value);
 };
 async function body(request) {
-  if (!request.headers.get("content-type")?.includes("application/json"))
+  if (
+    request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !==
+    "application/json"
+  )
     fail(400, "JSON_REQUIRED", "Send a JSON request.");
-  const text = await request.text();
-  if (text.length > 8192) fail(400, "BODY_TOO_LARGE", "Request is too large.");
+  const limit = 8192;
+  if (Number(request.headers.get("content-length")) > limit)
+    fail(400, "BODY_TOO_LARGE", "Request is too large.");
+  const chunks = [];
+  let size = 0;
+  const reader = request.body?.getReader();
+  if (reader) {
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > limit) {
+          await reader.cancel().catch(() => {});
+          fail(400, "BODY_TOO_LARGE", "Request is too large.");
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const data = JSON.parse(text);
     if (!data || typeof data !== "object" || Array.isArray(data)) throw Error();
     return data;
@@ -330,14 +360,32 @@ async function dispatch(request, db) {
     await throttle(`booking:${user.id}`, 40);
     const status = action === "book" ? "confirmed" : "waitlisted";
     // A database trigger checks capacity inside this atomic statement; no read/write race.
-    const created = await query(
-      "INSERT INTO bookings(user_id,session_id,status,code,created_at) VALUES(?,?,?,?,?) RETURNING id",
-      user.id,
-      sessionId,
-      status,
-      bookingCode(),
-      Date.now(),
-    ).first();
+    let created;
+    // The unique index remains authoritative. A rare random code collision
+    // retries only the aborted insert, never a capacity or member conflict.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        created = await query(
+          "INSERT INTO bookings(user_id,session_id,status,code,created_at) VALUES(?,?,?,?,?) RETURNING id",
+          user.id,
+          sessionId,
+          status,
+          bookingCode(),
+          Date.now(),
+        ).first();
+        break;
+      } catch (e) {
+        const detail = `${e?.message || ""} ${e?.cause?.message || ""}`;
+        if (!detail.includes("UNIQUE constraint failed: bookings.code"))
+          throw e;
+        if (attempt === 2)
+          fail(
+            503,
+            "CODE_UNAVAILABLE",
+            "Could not assign a booking code. Please try again.",
+          );
+      }
+    }
     return response(
       {
         booking: await query(

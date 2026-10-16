@@ -37,9 +37,12 @@ export async function passwordHash(
   return `pbkdf2-sha256$100000$${salt}$${hex(new Uint8Array(bits))}`;
 }
 export async function verifyPassword(password, stored) {
-  const parts = stored.split("$");
-  if (parts.length !== 4 || parts[0] !== "pbkdf2-sha256") return false;
-  const actual = await passwordHash(password, parts[2]);
+  if (typeof password !== "string" || typeof stored !== "string") return false;
+  const parts = stored.match(
+    /^pbkdf2-sha256\$100000\$([a-f0-9]{32})\$([a-f0-9]{64})$/,
+  );
+  if (!parts) return false;
+  const actual = await passwordHash(password, parts[1]);
   let difference = actual.length ^ stored.length;
   for (let i = 0; i < actual.length; i++)
     difference |= actual.charCodeAt(i) ^ (stored.charCodeAt(i) || 0);

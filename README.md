@@ -104,7 +104,7 @@ If Chrome is already installed, avoid another browser download with `CHROME_CHAN
 
 `test/browser.mjs` covers login, inline validation, waitlist joining, live promotion, cancellation/rebooking, member route protection, staff check-in/replay and 360/768/1280 layouts. `test/browser-states.mjs` covers registration, real booking/cancellation, an intercepted 409 to prove optimistic rollback, empty dates, offline recovery and keyboard focus. No browser exceptions were observed in the verified run.
 
-A second booking audit added 5 API test groups (18 total with cookie authentication checks), a 500-operation invariant test, simultaneous HTTP tests against the real local D1 runtime, and browser tests for slow polling, lost responses and promotion during a join. See [BOOKING_AUDIT.md](BOOKING_AUDIT.md) for results and repeatable commands.
+A second booking audit added 5 API test groups (21 total with authentication and resilience checks), a 500-operation invariant test, simultaneous HTTP tests against the real local D1 runtime, and browser tests for slow polling, lost responses and promotion during a join. See [BOOKING_AUDIT.md](BOOKING_AUDIT.md) for results and repeatable commands.
 
 ## Clean-database backend verification
 
@@ -149,7 +149,7 @@ All non-public routes require a valid server-verified session. Browser requests 
 | GET `/api/sessions/:id/bookings` | Admin | Session register with member details |
 | POST `/api/check-in` | Admin | `{code}`; mark present exactly once |
 
-Errors always use `{ "error": { "code": "...", "message": "...", "fields": {} } }`. Statuses are 400/422 for input, 401 for authentication, 403 for roles, 404 for unknown or unowned records, 409 for conflicts, 429 for throttling, and a safe 500 for unexpected errors. Successful creation returns 201.
+Errors always use `{ "error": { "code": "...", "message": "...", "fields": {} } }`. Statuses are 400/422 for input, 401 for authentication, 403 for roles, 404 for unknown or unowned records, 409 for conflicts, 429 for throttling, a safe 500 for unexpected errors, and 503 if a code cannot be allocated after bounded collision retries. Successful creation returns 201.
 
 ## Assumptions
 
@@ -179,3 +179,9 @@ The full app is built for the recruitment brief, not a claim of production certi
 Visual direction: restrained typography, soft neutral/sage surfaces and generous spacing, inspired by the supplied [Lucid reference](https://dribbble.com/shots/27524013-Lucid-AI-recovery-ecosystems-Website). The visual artwork is CSS; no third-party images or copied design assets are bundled. The focus is the booking workflow, not decoration.
 
 AI assistance was used with the candidate’s stated permission from the society. Commit history records actual implementation stages. The candidate should review and understand the code and be prepared to modify it in the required live walkthrough; no claim of unaided authorship is made.
+
+## Interaction and resilience follow-up
+
+Buttons have a subtle spring on press/release, with reduced-motion support and no layout reflow. Availability displays use each session’s capacity from the API. Fixed twenty-mat capacity and one-hour duration remain enforced business rules.
+
+The API reads JSON bodies with an 8 KiB streaming byte limit, rejects invalid UTF-8/media types and returns consistent errors. Random booking-code collisions retry the aborted insert up to three times; capacity and member-uniqueness conflicts are never retried. Invalid password-hash records fail authentication safely. [Resilience regressions](test/backend-resilience.test.mjs) exercise these cases against the real handler and schema.

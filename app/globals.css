@@ -87,7 +87,22 @@ a {
   transition:
     background 0.18s,
     color 0.18s,
-    opacity 0.18s;
+    opacity 0.18s,
+    transform 0.38s cubic-bezier(0.22, 1.65, 0.36, 1),
+    box-shadow 0.2s;
+}
+button:not(:disabled):active,
+a.button:active {
+  transform: scale(0.965);
+  transition-duration: 0.09s;
+}
+@media (hover: hover) {
+  .button:not(:disabled):hover {
+    box-shadow: 0 4px 12px #282a270c;
+  }
+  .session-row:hover {
+    background: #dfe4d618;
+  }
 }
 ::selection {
   background: var(--sage);
@@ -275,6 +290,11 @@ a {
 }
 .field input::placeholder {
   color: #8a8b84;
+}
+.field input:focus,
+.field select:focus {
+  background: #ffffff80;
+  box-shadow: 0 0 0 3px #dfe4d650;
 }
 .field-error {
   color: #9a332c;
@@ -1268,6 +1288,10 @@ footer > span:last-child {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active,
+  a.button:active {
+    transform: none;
+  }
   html {
     scroll-behavior: auto;
   }

@@ -526,7 +526,7 @@ export default function Gym() {
     try {
       await api("/sessions", {
         method: "POST",
-        body: JSON.stringify({ date, hour, title, capacity: 20 }),
+        body: JSON.stringify({ date, hour, title }),
       });
       setNotice("Session created. All twenty mats are ready to book.");
       setDate(date);
@@ -908,17 +908,17 @@ export default function Gym() {
                                 "All mats taken"
                               ) : (
                                 <>
-                                  <strong>{s.remaining}</strong> / 20 mats
-                                  available
+                                  <strong>{s.remaining}</strong> / {s.capacity}{" "}
+                                  mats available
                                 </>
                               )}
                             </span>
                             <div className="capacity" aria-hidden="true">
-                              {Array.from({ length: 20 }, (_, i) => (
+                              {Array.from({ length: s.capacity }, (_, i) => (
                                 <i
                                   key={i}
                                   className={
-                                    i < 20 - s.remaining ? "taken" : ""
+                                    i < s.capacity - s.remaining ? "taken" : ""
                                   }
                                 />
                               ))}

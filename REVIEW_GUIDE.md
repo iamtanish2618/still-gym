@@ -55,7 +55,7 @@ npm run typecheck
 npm run build
 ```
 
-The 18 automated test groups use isolated databases and do not alter the demo data. One test deliberately injects an internal error and verifies the safe response; its `API error Error` log is expected.
+The 21 automated test groups use isolated databases and do not alter the demo data. One test deliberately injects an internal error and verifies the safe response; its `API error Error` log is expected.
 
 For browser and real HTTP/D1 audits, follow the separate local-database commands in [BOOKING_AUDIT.md](BOOKING_AUDIT.md#repeat-the-checks). The browser tests modify fixtures and the check-in tests consume the active code, so each fresh run's data requirements are documented.
 
