@@ -70,3 +70,7 @@ New visits now show all upcoming sessions. Applied date filters and selected sta
 All **25 backend groups passed**. A new actual libSQL-file test closes storage, reopens it without reseeding, then authenticates again: confirmed booking IDs/codes, waitlist positions and staff-created sessions remain unchanged. Logout revokes only the token; an expired session also leaves booking data intact. Separate-client races verify two people on the final mat (one 201/one 409) and duplicate concurrent clicks (one record).
 
 The browser persistence flow passed reload, logout/login and a fresh browser context; the staff register still showed the confirmed booking while its member was logged out, and remaining capacity stayed 19. Staff sessions survived staff logout/login. Schedule-persistence and slow-network/lost-response regressions also passed. Animation feedback follows server success and respects reduced motion.
+
+## Modular release verification — 16 October 2026
+
+The refactor retains the tested database invariants and async request protections. All 35 Node groups and nine browser/HTTP suites passed locally; the live deployment repeated concurrency, FIFO, check-in, permissions and persistence checks. Existing production records were compared by row fingerprints and stayed unchanged (2 users, 6 sessions, 4 bookings). No production schema reset, fixture seed or automatic migration occurred. See [DEPLOYMENT.md](DEPLOYMENT.md#modular-release--16-october-2026) for the deployment/commit evidence and [tests/README.md](tests/README.md) to repeat isolated checks.
