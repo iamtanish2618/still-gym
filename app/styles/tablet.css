@@ -1,0 +1,56 @@
+@media (max-width: 1000px) {
+  .header {
+    gap: 18px;
+  }
+  .brand-caption {
+    display: none;
+  }
+  .workspace {
+    padding: 40px 5.5% 60px;
+  }
+  .page-heading h1 {
+    font-size: 48px;
+  }
+  .booking-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .session-info {
+    gap: 12px;
+  }
+  .session-icon {
+    display: none;
+  }
+  .table-head,
+  .session-row {
+    grid-template-columns: 1.2fr 1fr 150px;
+  }
+  .session-action .button {
+    width: 145px;
+  }
+  .auth-story {
+    padding: 38px 27px 25px;
+  }
+  .auth-story h1 {
+    font-size: 60px;
+    letter-spacing: -3px;
+  }
+  .auth-form-section {
+    padding: 35px;
+  }
+  .auth-layout {
+    min-height: 730px;
+  }
+  .orb-scene {
+    margin-left: -27px;
+    margin-right: -27px;
+  }
+  .orb {
+    right: 14%;
+  }
+  .mat-art {
+    padding: 0 15px;
+  }
+  .page-heading .muted {
+    max-width: 470px;
+  }
+}

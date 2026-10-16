@@ -1,0 +1,101 @@
+/* Feedback follows acknowledged server actions; it never delays navigation. */
+.workspace {
+  animation: studio-arrive 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.auth-layout {
+  animation: studio-arrive 0.4s ease-out both;
+}
+.alert.success {
+  animation: success-arrive 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.success-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.success-check {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.success-check path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: check-draw 0.45s ease-out both;
+}
+.request-spinner {
+  display: inline-block;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: request-turn 0.8s linear infinite;
+}
+.action-pulse {
+  animation: action-confirm 0.85s ease-out;
+}
+@keyframes studio-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes success-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes request-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes action-confirm {
+  0% {
+    background-color: #e4ecd9;
+    box-shadow: inset 0 0 0 1px #8a9b76;
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active,
+  a.button:active,
+  .field select:hover {
+    transform: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *:before,
+  *:after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

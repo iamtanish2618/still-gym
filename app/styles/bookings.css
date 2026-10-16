@@ -1,0 +1,94 @@
+.booking-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 21px;
+}
+.booking-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 25px;
+  background: #f1f1eb;
+}
+.booking-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 33px;
+}
+.booking-top .eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.8px;
+}
+.booking-card h2 {
+  font-size: 23px;
+  letter-spacing: -0.7px;
+}
+.booking-time {
+  font-size: 12px;
+  margin: 9px 0 24px;
+  color: var(--muted);
+}
+.booking-time span {
+  padding: 0 6px;
+}
+.ticket {
+  border-top: 1px dashed #c5cabc;
+  border-bottom: 1px dashed #c5cabc;
+  padding: 23px 0 19px;
+  min-height: 144px;
+}
+.ticket .eyebrow {
+  font-size: 8px;
+}
+.booking-code {
+  font-size: 25px;
+  letter-spacing: 3px;
+  font-family: monospace;
+  font-weight: 400;
+  display: block;
+  margin: 13px 0 9px;
+}
+.ticket small {
+  font-size: 10px;
+  color: var(--muted);
+  display: block;
+}
+.queue-number {
+  font-family: var(--serif);
+  font-size: 45px;
+  font-weight: 400;
+  display: block;
+  line-height: 1.4;
+}
+.cancel {
+  width: 100%;
+  justify-content: space-between;
+  margin-top: 11px;
+  color: var(--muted);
+}
+.cancel-confirm {
+  font-size: 12px;
+  margin-top: 15px;
+}
+.cancel-confirm button {
+  margin-right: 14px;
+}
+.danger {
+  color: #914f42;
+}
+.past {
+  background: transparent;
+}
+.past .tag {
+  background: transparent;
+  color: var(--muted);
+}
+.past .booking-code {
+  color: var(--muted);
+}
+.cancelled-note {
+  font-size: 12px;
+  min-height: 100px;
+  padding-top: 22px;
+}

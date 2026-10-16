@@ -1,0 +1,129 @@
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  min-height: 755px;
+}
+.auth-story {
+  margin: 38px 0 38px 8%;
+  padding: 47px 38px 24px;
+  background: #eeece7;
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-story h1 {
+  font-size: clamp(50px, 5.3vw, 78px);
+  letter-spacing: -4px;
+  line-height: 1.04;
+  margin: 26px 0 23px;
+  position: relative;
+  z-index: 1;
+}
+.auth-story h1 em {
+  letter-spacing: -4px;
+}
+.intro {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+  position: relative;
+  z-index: 1;
+}
+.orb-scene {
+  height: 278px;
+  position: relative;
+  margin: 8px -38px 12px;
+  overflow: hidden;
+}
+.orb {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  top: 25px;
+  right: 19%;
+  background: radial-gradient(
+    circle at 32% 25%,
+    #fcfbf5 0%,
+    #e4e2d9 35%,
+    #9faaa0 68%,
+    #576858 92%
+  );
+  box-shadow:
+    35px 45px 52px -30px #58604f66,
+    inset -12px -15px 30px #7b807655;
+}
+.orbit {
+  position: absolute;
+  width: 475px;
+  height: 145px;
+  border: 1px solid #b3b7a97a;
+  border-radius: 50%;
+  transform: rotate(-28deg);
+  left: calc(50% - 237px);
+  top: 100px;
+  z-index: 2;
+}
+.orbit-two {
+  transform: rotate(-28deg) scale(1.15);
+  opacity: 0.4;
+}
+.orbit-caption {
+  position: absolute;
+  left: 38px;
+  bottom: 13px;
+  font-size: 8px;
+  letter-spacing: 2px;
+  z-index: 3;
+}
+.story-footer {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #cfcec5;
+  padding-top: 17px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.auth-form-section {
+  display: grid;
+  place-items: center;
+  padding: 50px;
+}
+.auth-form {
+  width: 100%;
+  max-width: 330px;
+}
+.auth-form h2 {
+  font-size: 34px;
+  letter-spacing: -1.2px;
+  margin: 18px 0 10px;
+}
+.auth-form > .muted {
+  font-size: 12px;
+  max-width: 290px;
+}
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  margin: 29px 0 27px;
+  gap: 27px;
+}
+.auth-tabs button {
+  background: none;
+  border: 0;
+  padding: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.auth-tabs button[aria-pressed="true"] {
+  color: var(--ink);
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: -1px;
+}
+.auth-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin: 20px 0;
+}

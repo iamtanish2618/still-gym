@@ -1,0 +1,142 @@
+.shell {
+  max-width: 1600px;
+  margin: auto;
+}
+.header {
+  height: 106px;
+  margin: 0 5.5%;
+  display: flex;
+  align-items: center;
+  gap: 35px;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  font-family: var(--serif);
+  font-size: 43px;
+  letter-spacing: -3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1;
+}
+.brand-dot {
+  margin-left: -12px;
+  color: #7c8a70;
+}
+.mark {
+  width: 29px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: rotate(18deg);
+}
+.mark i {
+  display: block;
+  background: var(--ink);
+  width: 6px;
+  height: 24px;
+  border-radius: 5px;
+}
+.mark i:nth-child(2) {
+  height: 36px;
+}
+.brand-caption,
+.small-label,
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  font-weight: 500;
+}
+.brand-caption {
+  font-size: 9px;
+  max-width: 100px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.header nav {
+  display: flex;
+  gap: 32px;
+  align-self: stretch;
+  margin-left: auto;
+}
+.header nav a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  position: relative;
+}
+.header nav a[aria-current="page"] {
+  color: var(--ink);
+}
+.header nav a[aria-current="page"]:after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ink);
+}
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 30px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.switch-track {
+  display: inline-flex;
+  align-items: center;
+  width: 26px;
+  height: 16px;
+  padding: 2px;
+  border-radius: 20px;
+  background: #d4d6cc;
+}
+.switch-track span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s ease;
+}
+.mode-switch[aria-checked="true"] .switch-track {
+  background: #64775c;
+}
+.mode-switch[aria-checked="true"] .switch-track span {
+  transform: translateX(10px);
+}
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+.header nav + .header-end {
+  margin-left: 25px;
+}
+.nav-count {
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  border: 1px solid #c9d0c0;
+  border-radius: 50%;
+  width: 33px;
+  height: 33px;
+  background: var(--sage);
+  font-family: var(--serif);
+  font-size: 17px;
+}

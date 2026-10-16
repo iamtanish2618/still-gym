@@ -1,0 +1,18 @@
+@media (min-width: 1500px) {
+  .auth-story {
+    margin-left: 12%;
+  }
+  .auth-layout {
+    min-height: 820px;
+  }
+  .orb-scene {
+    height: 330px;
+  }
+  .orb {
+    width: 280px;
+    height: 280px;
+  }
+  .auth-form {
+    max-width: 370px;
+  }
+}

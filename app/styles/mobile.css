@@ -1,0 +1,270 @@
+@media (max-width: 700px) {
+  .header {
+    height: auto;
+    min-height: 90px;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 22px 0 0;
+  }
+  .header nav {
+    order: 3;
+    flex-basis: 100%;
+    gap: 16px;
+    min-height: 44px;
+    height: auto;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+  }
+  .header nav + .header-end {
+    margin-left: auto;
+  }
+  .header-end .small-label {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .brand {
+    font-size: 36px;
+  }
+  .mark {
+    transform: scale(0.8) rotate(18deg);
+    margin-right: -3px;
+  }
+  .header:has(.small-label) {
+    padding-bottom: 22px;
+  }
+  .header-end {
+    gap: 8px;
+  }
+  .avatar {
+    width: 29px;
+    height: 29px;
+  }
+  .auth-layout {
+    display: block;
+    min-height: 0;
+  }
+  .auth-story {
+    margin: 24px 5.5% 0;
+    padding: 28px 25px 24px;
+    min-height: 285px;
+  }
+  .auth-story h1 {
+    font-size: 48px;
+    margin: 20px 0 15px;
+    letter-spacing: -2px;
+  }
+  .auth-story h1 em {
+    letter-spacing: -2px;
+  }
+  .auth-story .intro {
+    font-size: 11px;
+    max-width: 220px;
+  }
+  .auth-story .intro br {
+    display: none;
+  }
+  .orb-scene {
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    right: -75px;
+    top: 60px;
+    opacity: 0.7;
+  }
+  .orb {
+    width: 190px;
+    height: 190px;
+    right: 0;
+  }
+  .orbit {
+    width: 260px;
+    left: 0;
+  }
+  .orbit-two,
+  .orbit-caption,
+  .story-footer {
+    display: none;
+  }
+  .auth-story .eyebrow {
+    font-size: 8px;
+  }
+  .auth-form-section {
+    padding: 37px 25px 42px;
+  }
+  .auth-form {
+    max-width: 400px;
+  }
+  .auth-form h2 {
+    font-size: 30px;
+  }
+  .workspace {
+    padding-top: 33px;
+  }
+  .page-heading {
+    display: block;
+    margin-bottom: 28px;
+  }
+  .page-heading h1 {
+    font-size: 43px;
+    letter-spacing: -2px;
+    margin: 14px 0;
+  }
+  .page-heading .muted {
+    font-size: 12px;
+  }
+  .heading-aside {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-top: 19px;
+    font-size: 10px;
+  }
+  .heading-aside small {
+    margin: 0 0 0 auto;
+    font-size: 9px;
+  }
+  .mobile-break {
+    display: block;
+  }
+  .session-banner {
+    padding: 26px;
+    min-height: 205px;
+  }
+  .session-banner h2 {
+    font-size: 28px;
+    position: relative;
+    z-index: 1;
+  }
+  .session-banner .eyebrow {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .mat-art {
+    position: absolute;
+    right: -47px;
+    top: 25px;
+    opacity: 0.3;
+    gap: 12px;
+  }
+  .banner-foot {
+    font-size: 9px;
+  }
+  .section-title {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .section-title h2 {
+    font-size: 21px;
+  }
+  .date-control {
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+  .date-control .text-btn {
+    margin-left: auto;
+    font-size: 11px;
+  }
+  .table-head {
+    display: none;
+  }
+  .session-row {
+    grid-template-columns: 1fr 144px;
+    padding: 22px 0;
+    gap: 19px 10px;
+  }
+  .session-info {
+    grid-column: 1/-1;
+  }
+  .session-info h3 {
+    font-size: 18px;
+  }
+  .session-icon {
+    display: grid;
+    width: 37px;
+    height: 37px;
+    font-size: 22px;
+  }
+  .session-action .button {
+    width: 142px;
+  }
+  .capacity {
+    max-width: 150px;
+    gap: 2px;
+  }
+  .availability {
+    font-size: 10px;
+  }
+  .booking-grid {
+    grid-template-columns: 1fr;
+  }
+  .booking-card {
+    padding: 25px;
+  }
+  .booking-top {
+    margin-bottom: 25px;
+  }
+  .booking-code {
+    font-size: 28px;
+  }
+  .ticket small {
+    font-size: 11px;
+  }
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .panel {
+    padding: 23px;
+  }
+  .panel h2 {
+    font-size: 26px;
+  }
+  .checkin-panel form {
+    max-width: 100%;
+  }
+  .form-row {
+    gap: 10px;
+  }
+  .form-row input {
+    padding: 12px 9px;
+  }
+  .roster-select {
+    width: 100%;
+    min-width: 0;
+  }
+  .roster-scroll {
+    margin-left: -5px;
+    margin-right: -5px;
+  }
+  table {
+    min-width: 450px;
+  }
+  .roster .section-title {
+    gap: 12px;
+  }
+  .quiet-note p {
+    font-size: 10px;
+  }
+  footer {
+    min-height: 100px;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 22px 0;
+  }
+  footer > span:last-child {
+    display: none;
+  }
+  footer > span {
+    font-size: 9px;
+  }
+  .alert {
+    font-size: 12px;
+    padding: 13px;
+    align-items: flex-start;
+  }
+  .button {
+    min-height: 46px;
+  }
+}

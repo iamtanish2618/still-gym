@@ -1,4 +1,4 @@
-import { seed } from "../test/fixtures/demo-seed.mjs";
+import { seed } from "../tests/fixtures/demo-seed.mjs";
 import { getDatabase } from "../server/database.mjs";
 if (process.env.VERCEL || process.env.TURSO_DATABASE_URL)
   throw Error(

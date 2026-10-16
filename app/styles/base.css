@@ -1,0 +1,109 @@
+:root {
+  --paper: #f8f7f4;
+  --ink: #282a27;
+  --muted: #62675f;
+  --line: #dedfd8;
+  --sage: #dfe4d6;
+  --green: #4c5c43;
+  --warm: #e9e4dc;
+  --white: #fff;
+  --serif: Georgia, "Times New Roman", serif;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  font-weight: 400;
+}
+em {
+  font-family: var(--serif);
+  font-weight: 400;
+}
+button {
+  color: inherit;
+}
+input,
+select {
+  min-width: 0;
+}
+input:focus,
+select:focus {
+  border-color: var(--green);
+}
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 5px;
+}
+button,
+input,
+select,
+a {
+  transition:
+    background 0.18s,
+    color 0.18s,
+    opacity 0.18s,
+    transform 0.38s cubic-bezier(0.22, 1.65, 0.36, 1),
+    box-shadow 0.2s;
+}
+button:not(:disabled):active,
+a.button:active {
+  transform: scale(0.965);
+  transition-duration: 0.09s;
+}
+@media (hover: hover) {
+  .button:not(:disabled):hover {
+    box-shadow: 0 4px 12px #282a270c;
+  }
+  .session-row:hover {
+    background: #dfe4d618;
+  }
+}
+::selection {
+  background: var(--sage);
+}

@@ -1,0 +1,38 @@
+footer {
+  margin: 0 5.5%;
+  border-top: 1px solid var(--line);
+  min-height: 104px;
+  display: flex;
+  align-items: center;
+  gap: 33px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.footer-brand {
+  font-size: 30px;
+  color: var(--ink);
+  letter-spacing: -2px;
+}
+footer > span:last-child {
+  margin-left: auto;
+}
+.skip {
+  position: fixed;
+  left: 20px;
+  top: -100px;
+  background: var(--ink);
+  color: white;
+  padding: 12px;
+  z-index: 50;
+}
+.skip:focus {
+  top: 10px;
+}
+.boot {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: var(--muted);
+}

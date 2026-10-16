@@ -25,9 +25,9 @@ async function route(request: Request) {
   }
 }
 export {
-  route as GET,
-  route as POST,
   route as DELETE,
+  route as GET,
   route as PATCH,
+  route as POST,
   route as PUT,
 };

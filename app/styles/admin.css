@@ -1,0 +1,98 @@
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  margin-bottom: 28px;
+}
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 31px;
+}
+.panel h2 {
+  font-size: 27px;
+  letter-spacing: -0.8px;
+  line-height: 1.2;
+  margin: 12px 0;
+}
+.panel > .muted {
+  font-size: 12px;
+  margin-bottom: 26px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 17px;
+}
+.checkin-panel {
+  background: #e9ece2;
+  position: relative;
+  overflow: hidden;
+}
+.checkin-panel h2 {
+  font-size: 32px;
+  margin: 22px 0 15px;
+}
+.checkin-panel form {
+  position: relative;
+  z-index: 1;
+  max-width: 290px;
+}
+.code-input {
+  letter-spacing: 4px;
+  font-family: monospace;
+  text-transform: uppercase;
+  background: #f5f6f0 !important;
+}
+.desk-symbol {
+  position: absolute;
+  right: -10px;
+  bottom: -70px;
+  font-family: var(--serif);
+  font-size: 270px;
+  line-height: 1;
+  color: #d4ddc8;
+  transform: rotate(15deg);
+  pointer-events: none;
+}
+.roster-select {
+  min-width: 250px;
+  margin: 0;
+}
+.roster .section-title {
+  margin: 0 0 20px;
+}
+.roster-scroll {
+  overflow-x: auto;
+  margin-top: 25px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  text-align: left;
+}
+th {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 400;
+  padding: 12px 12px 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+td {
+  padding: 15px 12px 15px 0;
+  border-bottom: 1px solid var(--line);
+}
+td strong {
+  font-weight: 400;
+}
+td small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+.mono {
+  font-family: monospace;
+  letter-spacing: 1px;
+}

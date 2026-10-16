@@ -46,21 +46,19 @@ export function adaptClient(client) {
     },
   };
 }
-let database;
-export async function getDatabase() {
-  if (database) return database;
-  let url = process.env.TURSO_DATABASE_URL?.trim();
-  const production = Boolean(process.env.VERCEL);
+export async function openDatabase(environment = process.env) {
+  let url = environment.TURSO_DATABASE_URL?.trim();
+  const production = Boolean(environment.VERCEL);
   if (
     production &&
-    (!url || !process.env.TURSO_AUTH_TOKEN || !/^(libsql|https):\/\//.test(url))
+    (!url || !environment.TURSO_AUTH_TOKEN || !/^(libsql|https):\/\//.test(url))
   )
     throw Error(
       "Configure the shared Turso database before deployment. Local file storage is forbidden on Vercel.",
     );
   if (!url) {
     const path = resolve(
-      /* turbopackIgnore: true */ process.env.LOCAL_DATABASE_PATH ||
+      /* turbopackIgnore: true */ environment.LOCAL_DATABASE_PATH ||
         ".local/still.db",
     );
     await mkdir(dirname(path), { recursive: true });
@@ -68,7 +66,7 @@ export async function getDatabase() {
   }
   const client = createClient({
     url,
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
+    authToken: environment.TURSO_AUTH_TOKEN || undefined,
     intMode: "number",
   });
   if (url.startsWith("file:")) {
@@ -76,6 +74,16 @@ export async function getDatabase() {
     await client.execute("PRAGMA busy_timeout=5000");
     await client.execute("PRAGMA journal_mode=WAL");
   }
-  database = adaptClient(client);
-  return database;
+  return adaptClient(client);
+}
+
+// Share initial connection setup across concurrent cold-start requests. A failed
+// connection is retryable; no rejected promise is retained for future requests.
+let databasePromise;
+export function getDatabase() {
+  databasePromise ??= openDatabase().catch((error) => {
+    databasePromise = undefined;
+    throw error;
+  });
+  return databasePromise;
 }

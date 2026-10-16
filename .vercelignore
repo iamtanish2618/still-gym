@@ -6,6 +6,6 @@
 .codex
 work
 outputs
-test
+tests
 docs/screenshots
 *.tsbuildinfo

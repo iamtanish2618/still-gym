@@ -1,0 +1,41 @@
+.workspace {
+  padding: 54px 7% 72px;
+}
+.page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 39px;
+  gap: 20px;
+}
+.page-heading h1 {
+  font-size: 57px;
+  letter-spacing: -2.7px;
+  line-height: 1.12;
+  margin: 15px 0;
+}
+.page-heading .muted {
+  font-size: 13px;
+}
+.heading-aside {
+  font-size: 11px;
+  white-space: nowrap;
+  padding-bottom: 5px;
+}
+.heading-aside small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #617550;
+  margin-right: 6px;
+}
+.mobile-break {
+  display: none;
+}
