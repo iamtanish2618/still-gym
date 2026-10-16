@@ -41,7 +41,7 @@ npm run typecheck
 npm run build
 ```
 
-`npm test` includes 15 test groups, including the five added invariant groups. Tests create isolated SQLite databases. The deliberately injected internal error prints `API error Error` and must still produce a safe JSON response.
+`npm test` includes 18 test groups, including the five added invariant groups. Tests create isolated SQLite databases. The deliberately injected internal error prints `API error Error` and must still produce a safe JSON response.
 
 For HTTP and browser tests, use a separate **fresh seeded local D1 database**. These tests modify demo data and refuse non-local URLs. Build first, then:
 
@@ -65,3 +65,11 @@ TEST_URL=http://127.0.0.1:5174 npm run test:live
 ```
 
 Do not remove a database someone is using. Choose a new local directory for each fresh audit. Local tests and hosted data are separate. The existing optional hosting migration failure is documented in DEPLOYMENT.md and was not changed by this audit.
+
+## Authentication and real-use follow-up — 16 October 2026
+
+Browser login now uses server-issued HttpOnly, SameSite=Strict cookies, Secure on HTTPS, with same-origin/custom-header validation for cookie writes. Logout revokes the stored session and clears its cookie. Non-browser Bearer token login remains supported. There are now 18 automated test groups.
+
+The demo seed moved to test fixtures; it is CLI-only and is absent from the compiled runtime. Normal setup is empty and uses a separate database from the optional reviewer dataset. `npm run admin:create` provisions an administrator directly in the database with a chosen email and a hidden password; it neither creates a public admin-registration route nor elevates an existing member.
+
+A new browser flow passed against an EMPTY real D1 database: CLI admin, UI member registration, cookie login, admin UI session creation, booking, reload persistence, cancellation/rebooking with a fresh code, member privacy, server role enforcement and invalidated logout. All existing browser suites also passed after the cookie transition.

@@ -16,12 +16,13 @@ export class ApiError extends Error {
 const fail = (status, code, message, fields) => {
   throw new ApiError(status, code, message, fields);
 };
-const response = (data, status = 200) =>
+const response = (data, status = 200, headers = {}) =>
   Response.json(data, {
     status,
     headers: {
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
+      ...headers,
     },
   });
 const invalid = (fields) =>
@@ -109,6 +110,13 @@ async function dispatch(request, db) {
   const url = new URL(request.url),
     path = url.pathname.replace(/^\/api/, "").replace(/\/$/, "") || "/",
     method = request.method;
+  const unsafe = !["GET", "HEAD", "OPTIONS"].includes(method);
+  const origin = request.headers.get("Origin");
+  if (unsafe && origin && origin !== url.origin)
+    fail(403, "ORIGIN_FORBIDDEN", "Requests must come from this application.");
+  const browser = request.headers.get("X-Still-Client") === "browser";
+  const cookie = (value, maxAge) =>
+    `still_session=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${url.protocol === "https:" ? "; Secure" : ""}`;
   if (!db) fail(500, "DATABASE_UNAVAILABLE", "The database is unavailable.");
   const query = (sql, ...args) => db.prepare(sql).bind(...args);
   async function throttle(key, max) {
@@ -132,7 +140,11 @@ async function dispatch(request, db) {
       user.id,
       Date.now() + 7 * 86400000,
     ).run();
-    return response({ user: publicUser(user), token }, status);
+    return response(
+      { user: publicUser(user), ...(browser ? {} : { token }) },
+      status,
+      browser ? { "Set-Cookie": cookie(token, 7 * 86400) } : {},
+    );
   }
   if (path === "/health" && method === "GET") {
     await query("SELECT 1").first();
@@ -189,10 +201,20 @@ async function dispatch(request, db) {
       fail(401, "INVALID_CREDENTIALS", "Email or password is incorrect.");
     return sessionFor(user);
   }
-  const token = request.headers
+  const bearer = request.headers
     .get("Authorization")
     ?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
+  const cookieToken = request.headers
+    .get("Cookie")
+    ?.match(/(?:^|;\s*)still_session=([a-f0-9]{64})(?:;|$)/)?.[1];
+  const token = bearer || cookieToken;
   if (!token) fail(401, "UNAUTHENTICATED", "Please log in to continue.");
+  if (!bearer && unsafe && (origin !== url.origin || !browser))
+    fail(
+      403,
+      "CSRF_FORBIDDEN",
+      "Use this application's authenticated controls.",
+    );
   const tokenHash = await hashToken(token);
   const user = await query(
     "SELECT u.* FROM tokens t JOIN users u ON u.id=t.user_id WHERE t.hash=? AND t.expires_at>?",
@@ -217,7 +239,11 @@ async function dispatch(request, db) {
     return response({ user: publicUser(user) });
   if (path === "/auth/logout" && method === "POST") {
     await query("DELETE FROM tokens WHERE hash=?", tokenHash).run();
-    return response({ ok: true });
+    return response(
+      { ok: true },
+      200,
+      browser ? { "Set-Cookie": cookie("", 0) } : {},
+    );
   }
   if (path === "/sessions" && method === "GET") {
     const date = url.searchParams.get("date"),

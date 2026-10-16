@@ -9,7 +9,7 @@
     "install:ci": "node scripts/install-ci.mjs",
     "dev": "node scripts/run-framework.mjs dev",
     "build": "node scripts/run-framework.mjs build",
-    "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
+    "start": "node scripts/start-local.mjs",
     "db:generate": "drizzle-kit generate",
     "test": "node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
@@ -18,7 +18,10 @@
     "test:browser": "node test/browser.mjs && node test/browser-states.mjs",
     "format": "prettier --write app server test db/schema.ts",
     "test:browser:audit": "node test/browser-booking-audit.mjs",
-    "test:live": "node test/live-booking.mjs"
+    "test:live": "node test/live-booking.mjs",
+    "admin:create": "node scripts/create-admin.mjs",
+    "db:seed:demo": "node scripts/seed-local.mjs",
+    "test:browser:real": "node test/browser-real-backend.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

@@ -1,4 +1,4 @@
-import { seed } from "../server/seed.mjs";
+import { seed } from "../test/fixtures/demo-seed.mjs";
 import { spawnSync } from "node:child_process";
 import { writeFile, mkdir } from "node:fs/promises";
 // Generate INSERT statements, then execute them through Wrangler against local D1.

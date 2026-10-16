@@ -59,9 +59,12 @@ try {
     .locator(".booking-card")
     .filter({ hasText: "Waitlisted" })
     .waitFor();
-  const token = await page.evaluate(() =>
-    sessionStorage.getItem("still-token"),
-  );
+  const token = (
+    await api("/auth/login", null, "POST", {
+      email: "aanya@still.demo",
+      password: "StillDemo2026!",
+    })
+  ).data.token;
   const own = (await api("/bookings", token)).data.bookings;
   const waiting = own.find((b) => b.status === "waitlisted");
   assert.ok(waiting);

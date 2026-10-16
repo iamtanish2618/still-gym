@@ -1,4 +1,4 @@
-import { passwordHash, bookingCode } from "./auth.mjs";
+import { passwordHash, bookingCode } from "../../server/auth.mjs";
 // Demo data is explicit and opt-in. No runtime schema changes, automatic reseeding,
 // public admin-registration route, or destructive reset.
 export async function seed(
@@ -7,8 +7,7 @@ export async function seed(
 ) {
   if (await db.prepare("SELECT id FROM users LIMIT 1").first())
     throw Error("Database already contains accounts; refusing to overwrite.");
-  const hash = await passwordHash(password),
-    statements = [];
+  const statements = [];
   const users = [
     ["Studio admin", "admin@still.demo", "admin"],
     ["Aanya Shah", "aanya@still.demo", "member"],
@@ -19,13 +18,14 @@ export async function seed(
       "member",
     ]),
   ];
+  const hashes = await Promise.all(users.map(() => passwordHash(password)));
   users.forEach(([name, email, role], i) =>
     statements.push(
       db
         .prepare(
           "INSERT INTO users(id,name,email,password_hash,role) VALUES(?,?,?,?,?)",
         )
-        .bind(i + 1, name, email, hash, role),
+        .bind(i + 1, name, email, hashes[i], role),
     ),
   );
   const today = Math.floor((now + 19800000) / 86400000) * 86400000 - 19800000;

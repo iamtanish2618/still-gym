@@ -36,7 +36,6 @@ type Booking = {
 type Fields = Record<string, string>;
 type ApiResponse = {
   user: User;
-  token: string;
   sessions: Session[];
   bookings: Booking[];
   serverTime: number;
@@ -142,7 +141,6 @@ function Empty({
 }
 export default function Gym() {
   const [user, setUser] = useState<User | null>(null),
-    [token, setToken] = useState(""),
     [ready, setReady] = useState(false),
     [route, setRoute] = useState("login");
   const [sessions, setSessions] = useState<Session[]>([]),
@@ -168,73 +166,71 @@ export default function Gym() {
     mutating = useRef(false),
     previousBookings = useRef<Booking[]>([]),
     rosterSequence = useRef(0),
-    rosterLoadingSequence = useRef<number | null>(null);
+    rosterLoadingSequence = useRef<number | null>(null),
+    authGeneration = useRef(0);
   const now = clock + serverOffset;
-  const api = useCallback(
-    async (path: string, options: RequestInit = {}, override?: string) => {
-      const auth = override ?? token;
-      let r: Response;
-      let data: ApiResponse;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+  const api = useCallback(async (path: string, options: RequestInit = {}) => {
+    const generation = authGeneration.current;
+    let r: Response;
+    let data: ApiResponse;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      r = await fetch("/api" + path, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Still-Client": "browser",
+        },
+        cache: "no-store",
+        credentials: "same-origin",
+      });
       try {
-        r = await fetch("/api" + path, {
-          ...options,
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-            ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
-          },
-          cache: "no-store",
-        });
-        try {
-          data = (await r.json()) as ApiResponse;
-        } catch {
-          if (controller.signal.aborted)
-            throw new DOMException("Aborted", "AbortError");
-          throw new RequestError(
-            "The server sent an unreadable response. Please try again.",
-            502,
-          );
-        }
-      } catch (e) {
-        if (e instanceof RequestError) throw e;
+        data = (await r.json()) as ApiResponse;
+      } catch {
+        if (controller.signal.aborted)
+          throw new DOMException("Aborted", "AbortError");
         throw new RequestError(
-          controller.signal.aborted
-            ? "The request timed out. Check My bookings before retrying a reservation."
-            : "Cannot connect. Check your connection and try again.",
-          0,
-        );
-      } finally {
-        clearTimeout(timeout);
-      }
-      if (!r.ok) {
-        if (
-          r.status === 401 &&
-          !path.startsWith("/auth/") &&
-          sessionStorage.getItem("still-token") === auth
-        ) {
-          sessionStorage.removeItem("still-token");
-          requestSequence.current++;
-          rosterSequence.current++;
-          setUser(null);
-          setToken("");
-          setSessions([]);
-          setBookings([]);
-          setRoster([]);
-          previousBookings.current = [];
-          navigate("login");
-        }
-        throw new RequestError(
-          data.error?.message || "Something went wrong.",
-          r.status,
-          data.error?.fields,
+          "The server sent an unreadable response. Please try again.",
+          502,
         );
       }
-      return data;
-    },
-    [token],
-  );
+    } catch (e) {
+      if (e instanceof RequestError) throw e;
+      throw new RequestError(
+        controller.signal.aborted
+          ? "The request timed out. Check My bookings before retrying a reservation."
+          : "Cannot connect. Check your connection and try again.",
+        0,
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!r.ok) {
+      if (
+        r.status === 401 &&
+        !path.startsWith("/auth/") &&
+        generation === authGeneration.current
+      ) {
+        authGeneration.current++;
+        requestSequence.current++;
+        rosterSequence.current++;
+        setUser(null);
+        setSessions([]);
+        setBookings([]);
+        setRoster([]);
+        previousBookings.current = [];
+        navigate("login");
+      }
+      throw new RequestError(
+        data.error?.message || "Something went wrong.",
+        r.status,
+        data.error?.fields,
+      );
+    }
+    return data;
+  }, []);
   useEffect(() => {
     const change = () => {
       const next = location.hash.replace(/^#\/?/, "") || "sessions";
@@ -249,19 +245,13 @@ export default function Gym() {
     return () => window.removeEventListener("hashchange", change);
   }, []);
   useEffect(() => {
-    const stored = sessionStorage.getItem("still-token");
-    if (!stored) {
-      setReady(true);
-      return;
-    }
-    api("/auth/me", {}, stored)
-      .then((data) => {
-        setToken(stored);
-        setUser(data.user);
+    api("/auth/me")
+      .then((data) => setUser(data.user))
+      .catch((e) => {
+        if ((e as RequestError).status !== 401) setError((e as Error).message);
       })
-      .catch(() => sessionStorage.removeItem("still-token"))
       .finally(() => setReady(true));
-  }, []); // Restore once; token changes do not restart restoration.
+  }, []); // Restore the server-verified cookie session once.
   useEffect(() => {
     if (!ready) return;
     if (!user && route !== "login") navigate("login");
@@ -388,8 +378,7 @@ export default function Gym() {
         method: "POST",
         body: JSON.stringify({ name, email, password }),
       });
-      sessionStorage.setItem("still-token", d.token);
-      setToken(d.token);
+      authGeneration.current++;
       setUser(d.user);
       navigate(d.user.role === "admin" ? "admin" : "sessions");
     } catch (e) {
@@ -403,10 +392,9 @@ export default function Gym() {
     setPending("logout");
     try {
       await api("/auth/logout", { method: "POST", body: "{}" });
-      sessionStorage.removeItem("still-token");
+      authGeneration.current++;
       requestSequence.current++;
       rosterSequence.current++;
-      setToken("");
       setUser(null);
       setSessions([]);
       setBookings([]);
@@ -726,7 +714,7 @@ export default function Gym() {
                       label="Your name"
                       name="name"
                       autoComplete="name"
-                      placeholder="Aanya Shah"
+                      placeholder="Your full name"
                       error={fields.name}
                     />
                   )}
@@ -761,16 +749,6 @@ export default function Gym() {
                   A mat when you need it.
                   <br />A fair place in line when it’s full.
                 </p>
-                <details className="demo">
-                  <summary>Trying the studio? Demo accounts</summary>
-                  <p>
-                    Member: <code>aanya@still.demo</code>
-                    <br />
-                    Staff: <code>admin@still.demo</code>
-                    <br />
-                    Password for both: <code>StillDemo2026!</code>
-                  </p>
-                </details>
               </div>
             </section>
           </div>

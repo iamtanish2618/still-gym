@@ -13,3 +13,5 @@ Diagnostic identifiers:
 - Source: `c1c282753494720a1de5af2b0ebbafeb9d37e862`
 
 Use the reproducible local setup in README.md. The full brief makes deployment optional. A direct Workers/D1 deployment would need the migrations applied through a runner that preserves complete `CREATE TRIGGER ... END` statements, a D1 binding named `DB`, and seed data in an empty database. A static host alone cannot run the API.
+
+Authentication update: browser sessions now use HttpOnly cookies and the runtime bootstrap/seeding endpoint has been removed. Demo fixtures are CLI-only and isolated from real use.

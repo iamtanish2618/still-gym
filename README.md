@@ -21,7 +21,7 @@ A minimal gym booking app for BYTE’s web development challenge. Members reserv
 
 ## Quick start
 
-Requires **Node.js 22.13+**, npm, and Git. Node 24 LTS is a sensible local choice. No Cloudflare account is needed for local development.
+Requires **Node.js 22.13+**, npm and Git. No Cloudflare account is required for local use.
 
 ```sh
 git clone https://github.com/iamtanish2618/still-gym.git
@@ -29,13 +29,37 @@ cd still-gym
 npm ci
 npm run build
 npm run db:migrate
-npm run db:seed
+npm run admin:create
 npm run dev
 ```
 
-Open the local address printed by the server (normally `http://127.0.0.1:5173`). The backend and frontend share that origin. Migrate after the first build because the build writes Wrangler’s local configuration. `db:migrate` uses Wrangler's migration ledger and can be repeated; `db:seed` is for a fresh database and does not overwrite existing users. Local data persists in the ignored `.wrangler/state` folder across restarts.
+**Normal setup is empty.** It creates no predefined users, sessions or bookings. `admin:create` asks for your name, email and a hidden password, hashes the password and inserts the admin directly into the local database. It refuses duplicate emails instead of silently changing an existing account. Members register through the UI; an admin creates real sessions through the studio desk. Registration never accepts an admin role.
 
-The app needs no application signing secret: each login produces a cryptographically random token. `.env.example` documents the optional local seed-password override and one-time hosted setup secret. Never commit `.env`, `.dev.vars`, tokens, or database files. `.openai/hosting.json` contains a deployment identifier, not credentials.
+Open the Local URL printed by the server, normally `http://127.0.0.1:5173`. UI and API share the origin. Build before migrating because the build generates Wrangler’s local configuration. Migrations are repeatable; local data persists across restarts. No mock identity authorizes requests, no fallback user is used, and no database seed runs on app startup.
+
+By default all local commands use `.wrangler/state`. To use another local database, set the **same `LOCAL_DB_DIR`** for migration, admin creation and server startup. Example:
+
+```sh
+LOCAL_DB_DIR=.wrangler/live npm run db:migrate
+LOCAL_DB_DIR=.wrangler/live npm run admin:create
+LOCAL_DB_DIR=.wrangler/live npm run dev
+```
+
+An existing database is never reset or overwritten automatically. `.env.example` documents optional settings; pass `LOCAL_DB_DIR` in the shell as shown. Real passwords, database files and runtime state remain outside Git. The local CLI accepts JSON through standard input for automated provisioning; passwords must never be command-line arguments.
+
+## Optional reviewer dataset
+
+The brief asks for test credentials and sessions including a full one. Those records live exclusively in `test/fixtures/demo-seed.mjs`, and are inserted only by an explicit CLI command. They are not a substitute for registration, session creation, API responses or persistent storage, and the fixture is not imported by the runtime application.
+
+Use a separate database for the reviewer dataset:
+
+```sh
+LOCAL_DB_DIR=.wrangler/reviewer npm run db:migrate
+LOCAL_DB_DIR=.wrangler/reviewer npm run db:seed:demo
+LOCAL_DB_DIR=.wrangler/reviewer npm run dev
+```
+
+`db:seed` is a compatibility alias for the same explicit demo command. Seeding is for a fresh database; it refuses existing data. Never seed a database used by real members. Every fixture account gets its own random password salt. The screenshot gallery uses this optional dataset and does not represent records in a normal empty installation.
 
 ## Demo accounts
 
@@ -53,7 +77,7 @@ These are intentional public demo credentials, not production secrets. The seed 
 1. Log in as Aanya. Choose **All upcoming** or tomorrow’s date. Inspect available, booked and full sessions.
 2. Join the full session’s waitlist. **My bookings** shows position 1 and no usable code yet.
 3. In a separate browser/profile, log in as `member1@still.demo`, cancel that same session, and leave Aanya’s screen open.
-4. Within three seconds Aanya is confirmed, receives a code and a promotion message. Nobody refreshes. The session still has twenty bookings.
+4. On the next successful poll (normally within three seconds), Aanya is confirmed, receives a code and a promotion message. Nobody refreshes. The session still has twenty bookings.
 5. Cancel Aanya’s future booking and rebook to verify the active-record constraint allows a new booking after cancellation.
 6. Use Aanya’s *currently running* seeded session code at the admin desk. The first check-in shows her name; reuse fails. Future-session and cancelled codes also fail.
 7. As admin, create a future session, then select it in the register. Duplicate hours are rejected.
@@ -80,7 +104,20 @@ If Chrome is already installed, avoid another browser download with `CHROME_CHAN
 
 `test/browser.mjs` covers login, inline validation, waitlist joining, live promotion, cancellation/rebooking, member route protection, staff check-in/replay and 360/768/1280 layouts. `test/browser-states.mjs` covers registration, real booking/cancellation, an intercepted 409 to prove optimistic rollback, empty dates, offline recovery and keyboard focus. No browser exceptions were observed in the verified run.
 
-A second booking audit added 5 API test groups (15 total), a 500-operation invariant test, simultaneous HTTP tests against the real local D1 runtime, and browser tests for slow polling, lost responses and promotion during a join. See [BOOKING_AUDIT.md](BOOKING_AUDIT.md) for results and repeatable commands.
+A second booking audit added 5 API test groups (18 total with cookie authentication checks), a 500-operation invariant test, simultaneous HTTP tests against the real local D1 runtime, and browser tests for slow polling, lost responses and promotion during a join. See [BOOKING_AUDIT.md](BOOKING_AUDIT.md) for results and repeatable commands.
+
+## Clean-database backend verification
+
+`test/browser-real-backend.mjs` verifies the normal app without importing or running any demo seed: chosen admin credentials through the CLI, real member registration, HttpOnly cookie login, an empty schedule, admin-created session, booking, reload persistence, cancellation/rebooking, ownership, role enforcement and revoked logout. It must use an isolated, empty migrated database, with matching server and test paths:
+
+```sh
+LOCAL_DB_DIR=.sites-runtime/real-audit npm run db:migrate
+LOCAL_DB_DIR=.sites-runtime/real-audit npm start -- --port 5175
+# In another terminal:
+TEST_URL=http://127.0.0.1:5175 TEST_DB_DIR=.sites-runtime/real-audit CHROME_CHANNEL=chrome npm run test:browser:real
+```
+
+The test generates its own temporary test credentials and provisions its own test admin directly into that isolated database. It never provisions a real owner's account or modifies the default database. Use a new directory for another empty-database run.
 
 ## How correctness works
 
@@ -94,7 +131,7 @@ The client polls every three seconds while visible and immediately on window foc
 
 ## API
 
-All non-public routes require `Authorization: Bearer <token>`.
+All non-public routes require a valid server-verified session. Browser requests use the HttpOnly cookie; non-browser API clients use `Authorization: Bearer <token>`. Login/register with `X-Still-Client: browser` sets the cookie and omits the token from JSON. Bearer API clients receive the token in JSON. Foreign-origin writes are rejected; cookie writes also require the browser header and matching Origin.
 
 | Method / route | Access | Purpose |
 | --- | --- | --- |
@@ -127,13 +164,13 @@ Errors always use `{ "error": { "code": "...", "message": "...", "fields": {} } 
 
 ## Deployment
 
-The project is prepared for Sites/Cloudflare Workers with a D1 binding named `DB`; SQL migrations are in `drizzle/`. A deployment does not copy local data. The optional `/api/setup` bootstrap is disabled unless a secret `SETUP_KEY` is configured; it accepts that key only through `X-Setup-Key`, only seeds an empty database and never alters the schema. Remove the secret after initialization. Do not expose an unseeded shared deployment.
+The project uses a D1 binding named `DB`; migrations are in `drizzle/`. Hosted data is independent of local data. There is no runtime setup/seeding endpoint. Provision an admin through a trusted database operation with a salted hash, then create sessions through the authenticated admin UI. Never publish reviewer credentials as real member credentials.
 
 The optional hosted deployment failed in its migration runner; there is no verified live link. See [DEPLOYMENT.md](DEPLOYMENT.md) for the exact failure and limits of the diagnosis. The complete app runs locally using the commands above; screenshots and browser tests come from that running application.
 
 ## Tradeoffs and remaining limitations
 
-This challenge demo has no password reset, email verification or notification emails. Tokens are held in tab-scoped session storage and expire after seven days; logout revokes them server-side. A production app should consider HttpOnly cookie sessions with CSRF protection, account recovery, email verification, monitoring and external IP throttling. Passwords use salted PBKDF2-SHA256 at 100,000 iterations, the [Workers WebCrypto per-call limit](https://github.com/cloudflare/workerd/issues/1346); production credential storage should evaluate a dedicated Argon2id-capable auth service. The API rate limiter is database-backed, not an in-memory counter. Public demo credentials should never be reused for real members.
+This challenge demo has no password reset, email verification or notification emails. Browser sessions use HttpOnly, SameSite=Strict cookies, with Secure on HTTPS, and expire after seven days; logout revokes them server-side and clears the cookie. Cookie-authenticated writes require the same Origin and a custom application header. The UI never stores a session token in localStorage or sessionStorage. Bearer tokens remain available to non-browser API clients to satisfy the token-login brief. A production app should add account recovery, email verification, monitoring and external IP throttling. Passwords use salted PBKDF2-SHA256 at 100,000 iterations, the [Workers WebCrypto per-call limit](https://github.com/cloudflare/workerd/issues/1346); production credential storage should evaluate a dedicated Argon2id-capable auth service. Cookie flags follow [MDN secure cookie guidance](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies). The API rate limiter is database-backed, not an in-memory counter. Public demo credentials should never be reused for real members.
 
 The full app is built for the recruitment brief, not a claim of production certification. Tests exercise the real SQL constraints; a larger operational load test, dedicated screen-reader audit and disaster recovery exercise remain outside this submission.
 

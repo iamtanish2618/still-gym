@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { database, migrate } from "./database.mjs";
 import { handleApi } from "../server/api.mjs";
-import { seed } from "../server/seed.mjs";
+import { seed } from "./fixtures/demo-seed.mjs";
 import { bookingCode, hashToken, passwordHash } from "../server/auth.mjs";
 const db = database();
 migrate(db);

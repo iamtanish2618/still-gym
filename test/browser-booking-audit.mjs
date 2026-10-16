@@ -35,10 +35,15 @@ async function open(token, route = "sessions") {
   });
   const page = await context.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.addInitScript(
-    (t) => sessionStorage.setItem("still-token", t),
-    token,
-  );
+  await context.addCookies([
+    {
+      name: "still_session",
+      value: token,
+      url: base,
+      httpOnly: true,
+      sameSite: "Strict",
+    },
+  ]);
   return { context, page, goto: () => page.goto(base + "/#/" + route) };
 }
 try {
