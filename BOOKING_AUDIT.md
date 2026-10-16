@@ -50,3 +50,11 @@ A new browser flow passed against an EMPTY real D1 database: CLI admin, UI membe
 The suite now has 21 test groups. New regressions cover streamed request limits, multibyte payloads, invalid UTF-8, malformed content types, real SQLite code collisions with bounded retries, and invalid password records. Existing capacity, FIFO, ownership and check-in rules are unchanged. Session availability visuals read the capacity returned by the API. Button press feedback has been checked in Chrome, including reduced-motion behavior.
 
 Verification note: one local browser-audit run timed out while loading the runtime JavaScript asset; the local Worker logged a delayed static-asset response. A direct follow-up fetched that asset with HTTP 200 in approximately 3.5 ms, and the complete audit rerun passed without application changes. No application exception was observed in that rerun.
+
+## Vercel / Turso verification — 16 October 2026
+
+The Next.js migration retained the original triggers and constraints. All 23 backend groups, type checking and production build passed, including CI on Node 24. A libSQL regression uses four independent database connections and checks capacity/FIFO across connections.
+
+The empty-database browser flow passed without fixtures. Browser regression checks passed for signup, optimistic rollback, offline recovery, slow polling, lost responses, promotion during join, mobile layouts and staff registers. Migration-specific issues corrected: Next’s internal localhost URL needed canonicalization against the served Host for CSRF; logout needed to return newly registered members to the login form. Tests now distinguish Next’s route announcer from application alerts and tolerate automatic reconnect removing a retry button.
+
+The public deployment at https://still-gym.vercel.app passed 32 simultaneous booking requests (20 confirmations, 12 conflicts), FIFO/no-queue-jumping, privacy/roles and one-time concurrent check-in. A live browser verified fresh signup, password confirmation, secure cookies, real booking/reload/cancellation, logout and username login. Generated audit records were removed. See [deployment evidence](DEPLOYMENT.md#verification-status).

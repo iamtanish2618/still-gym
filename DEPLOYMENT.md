@@ -1,6 +1,8 @@
 # Deployment
 
-The current target is Vercel project `still-gym` under `iamtanish2618-3571s-projects`. Next.js serves the frontend and API on Node 24. Turso resource `still-gym-db` stores all accounts, sessions, bookings and token hashes. Function and database region: Mumbai (`bom1`).
+**Live website:** https://still-gym.vercel.app
+
+The current deployment is Vercel project `still-gym` under `iamtanish2618-3571s-projects`. Next.js serves the frontend and API on Node 24. Turso resource `still-gym-db` stores all accounts, sessions, bookings and token hashes. Function and database region: Mumbai (`bom1`).
 
 ## Configuration
 
@@ -24,7 +26,17 @@ The GitHub repository is public and commits use `iamtanish2618`’s GitHub-assoc
 
 ## Verification status
 
-The shared database has been provisioned and both migrations applied successfully. Local fresh-database browser verification passed. Live URL and deployed verification results will be recorded here after deployment.
+Released 16 October 2026 from commit `44e5a6c`. Vercel deployment: `dpl_F7E1EWw54AB7bcu1FT11rcREgbJq`.
+
+The public production domain responds without Vercel authentication. Preview URLs retain Vercel’s default protection. Shared-database health passed; both migrations applied. All 23 backend groups, TypeScript and production build passed locally and in [GitHub Actions](https://github.com/iamtanish2618/still-gym/actions/runs/38907960296). Local fresh-database browser verification and 32-request production-build HTTP races passed. The audit against the public production domain also passed:
+
+- 32 simultaneous booking requests: exactly **20 confirmations / 12 conflicts**; measured batch wall time **1,260 ms** in this run (a small correctness check, not a general throughput benchmark).
+- FIFO cancellation/promotion, no queue jumping, hidden waiting codes, own-booking privacy and staff authorization.
+- Two concurrent check-ins for one active code: exactly one 200 and one 409.
+- Browser signup with mismatch validation, Secure/HttpOnly/SameSite cookie, booking/reload/cancellation, logout and case-insensitive username login. No browser exceptions.
+- Generated audit records were removed using their unique run-specific identities. No demo users or sessions were left in production.
+
+Operator-only repeat: `CHROME_CHANNEL=chrome node --env-file-if-exists=.env.local scripts/verify-deployment.mjs https://still-gym.vercel.app --test-records`. This needs the matching remote database configuration, creates temporary records and removes only that run’s records. It never runs during startup, build or normal requests.
 
 ## Historical hosting attempt
 

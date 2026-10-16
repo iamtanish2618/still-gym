@@ -1,3 +1,5 @@
+**Live app:** [still-gym.vercel.app](https://still-gym.vercel.app). Choose Create account to make your own member account. Staff sessions appear after the studio admin creates them.
+
 > Live accounts are self-created through signup. The public credentials below are for the optional local reviewer fixture only. Production is not seeded with demo accounts.
 
 # Reviewer guide

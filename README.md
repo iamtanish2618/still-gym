@@ -2,6 +2,8 @@
 
 A minimal gym booking app for BYTE’s web development challenge. Members reserve one of twenty mats, join a fair waitlist, and show a short code at the door. Staff create sessions and manage attendance. Every account and booking in the live app comes from the shared database.
 
+**Live website:** [still-gym.vercel.app](https://still-gym.vercel.app)
+
 **Repository:** [iamtanish2618/still-gym](https://github.com/iamtanish2618/still-gym) · **Review:** [reviewer guide](REVIEW_GUIDE.md) · **Hosting:** [deployment notes](DEPLOYMENT.md)
 
 ![Still member schedule](docs/screenshots/schedule-preview.png)
